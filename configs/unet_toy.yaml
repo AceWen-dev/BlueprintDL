@@ -1,0 +1,81 @@
+# UNet + 合成数据 训练配置
+# 用法: python tools/train.py --config configs/unet_toy.yaml
+task: segmentation
+seed: 42
+device: auto              # auto / cpu / cuda
+output_dir: runs/unet_toy
+
+data:
+  train:
+    type: SegmentationDataset
+    params:
+      image_dir: data/toy/train/images
+      mask_dir: data/toy/train/masks
+      transform:
+        type: Compose
+        params:
+          transforms:
+            - type: RandomCrop
+              params: { size: [128, 128] }
+            - type: RandomHorizontalFlip
+              params: { p: 0.5 }
+            - type: RandomBrightnessContrast
+              params: { alpha: [0.8, 1.2], beta: [-0.1, 0.1] }
+            - type: ToTensor
+            - type: Normalize
+              params: { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] }
+  val:
+    type: SegmentationDataset
+    params:
+      image_dir: data/toy/val/images
+      mask_dir: data/toy/val/masks
+      transform:
+        type: Compose
+        params:
+          transforms:
+            - type: Resize
+              params: { size: [128, 128] }
+            - type: ToTensor
+            - type: Normalize
+              params: { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] }
+  loader:
+    batch_size: 8
+    num_workers: 0
+    pin_memory: false
+
+model:
+  type: UNet
+  params:
+    in_channels: 3
+    num_classes: 4
+    backbone:
+      type: SimpleCNN
+      params:
+        channels: [16, 32, 64, 128]
+        num_blocks: [2, 2, 2, 2]
+
+loss:
+  type: CombinedLoss
+  params:
+    losses:
+      - { type: CrossEntropyLoss, params: { weight: 1.0, ignore_index: 255 } }
+      - { type: DiceLoss, params: { weight: 0.5, ignore_index: 255 } }
+
+optimizer:
+  type: AdamW
+  params: { lr: 0.001, weight_decay: 0.0001 }
+
+scheduler:
+  type: CosineAnnealingLR
+  params: { T_max: 20 }
+
+train:
+  epochs: 20
+  amp: false
+  gradient_clip: 1.0
+  log_interval: 10
+  save_best: { name: mIoU, mode: max }
+
+metrics:
+  - type: SegMetrics
+    params: { num_classes: 4, ignore_index: 255 }
