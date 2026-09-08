@@ -9,8 +9,8 @@ dist/
 .vscode/
 *.swp
 
-runs/
-data/
+/runs/
+/data/
 *.pth
 *.pt
 *.onnx

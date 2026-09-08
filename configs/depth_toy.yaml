@@ -1,0 +1,84 @@
+# YOLO26-Depth 风格单目深度估计 + 合成数据 训练配置
+# 生成数据: python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
+# 训练:     python tools/train.py --config configs/depth_toy.yaml
+# 评估:     python tools/evaluate.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth
+# 推理:     python tools/predict_depth.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth --input data/depth_toy/val/images
+#
+# 注意: 深度图默认 uint16 PNG（毫米）-> depth_scale: 0.001；
+#       若用 --format npy 生成（float32 米）-> depth_scale: 1.0
+task: depth_estimation
+seed: 42
+device: auto
+output_dir: runs/depth_toy
+
+data:
+  train:
+    type: DepthDataset
+    params:
+      image_dir: data/depth_toy/train/images
+      depth_dir: data/depth_toy/train/depth
+      depth_scale: 0.001
+      transform:
+        type: Compose
+        params:
+          transforms:
+            - type: RandomHorizontalFlip
+              params: { p: 0.5 }
+            - type: RandomBrightnessContrast
+              params: { alpha: [0.8, 1.2], beta: [-0.1, 0.1] }
+            - type: ToTensorDepth
+            - type: Normalize
+              params: { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] }
+  val:
+    type: DepthDataset
+    params:
+      image_dir: data/depth_toy/val/images
+      depth_dir: data/depth_toy/val/depth
+      depth_scale: 0.001
+      transform:
+        type: Compose
+        params:
+          transforms:
+            - type: ToTensorDepth
+            - type: Normalize
+              params: { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] }
+  loader:
+    batch_size: 8
+    num_workers: 0
+    pin_memory: false
+
+model:
+  type: DepthNet
+  params:
+    in_channels: 3
+    backbone:
+      type: SimpleCNN
+      params:
+        channels: [16, 32, 64, 128]
+    decoder:
+      type: UNetDecoder
+    head:
+      type: LogDepthHead
+
+loss:
+  type: DepthLoss
+  params: { silog_weight: 0.5, grad_weight: 0.5 }
+
+optimizer:
+  type: AdamW
+  params: { lr: 0.001, weight_decay: 0.0001 }
+
+scheduler:
+  type: CosineAnnealingLR
+  params: { T_max: 20 }
+
+train:
+  epochs: 20
+  amp: false
+  gradient_clip: 1.0
+  log_interval: 10
+  save_best: { name: delta1, mode: max }
+
+metrics:
+  - type: DepthMetrics
+    params: { max_depth: 10.0 }
