@@ -7,7 +7,7 @@ output_dir: runs/unet_toy
 
 data:
   train:
-    type: SegmentationDataset
+    type: SegmentationDataset #只要是type就是已经注册好的类，注册器会根据下面的参数自动构建该类
     params:
       image_dir: data/toy/train/images
       mask_dir: data/toy/train/masks
