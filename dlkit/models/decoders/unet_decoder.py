@@ -58,3 +58,15 @@ class UNetDecoder(nn.Module):
         for stage, skip in zip(self.stages, skips):
             x = stage(x, skip)
         return x
+    
+if __name__ == '__main__':
+    # 调试入口：VS Code 里用 .vscode/launch.json 的配置按 F5，或终端
+    #     PYTHONPATH=. python dlkit/models/decoders/unet_decoder.py
+    # （不要用 python -m：父包 __init__ 会先 import 本模块，导致重复注册）
+    decoder = UNetDecoder(encoder_channels=[16, 32, 64, 128])
+    feats = [
+        torch.randn(1, c, 64 // (2 ** i), 64 // (2 ** i))
+        for i, c in enumerate([16, 32, 64, 128])
+    ]
+    out = decoder(feats)
+    print('最终输出:', tuple(out.shape))   # 通道由 decoder_channels[-1] 决定，这里是 32

@@ -84,6 +84,7 @@ def _resolve(type_name):#负责把配置字典的字符串名字，对应到注�
     matches = [r for r in _ALL_REGISTRIES if type_name in r]
     if not matches:
         raise KeyError(
+
             '%r is not registered in any registry. Available: %s'
             % (type_name, sorted({k for r in _ALL_REGISTRIES for k in r.keys()}))
         )
@@ -96,7 +97,7 @@ def _resolve(type_name):#负责把配置字典的字符串名字，对应到注�
     return matches[0].get(type_name)
 
 
-def build_from_cfg(cfg):
+def build_from_cfg(cfg): #函数的输入是字典或json格式的配置文件，输出是从这个写配置文件中提取的类的实例化对象
     if isinstance(cfg, (list, tuple)):
         return [build_from_cfg(c) for c in cfg]
     if not isinstance(cfg, dict):
@@ -108,4 +109,4 @@ def build_from_cfg(cfg):
             return item(**params)
         params = build_from_cfg(params)
         return item(**params) #返回带参数的类
-    return {k: build_from_cfg(v) for k, v in cfg.items()}
+    return {k: build_from_cfg(v) for k, v in cfg.items()}#item返回键值对，{}里面是字典推导式，[]是列表推导式

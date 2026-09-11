@@ -7,14 +7,17 @@ from dlkit.registry import LOSSES
 
 @LOSSES.register()
 class FocalLoss(nn.Module):
-    def __init__(self, weight=1.0, gamma=2.0, alpha=None, ignore_index=None):
+    def __init__(self, weight=1.0, gamma=2.0, alpha=None, ignore_index=None,
+                 target_key='mask'):
         super().__init__()
         self.weight = weight
         self.gamma = gamma
         self.alpha = alpha
         self.ignore_index = ignore_index
+        self.target_key = target_key
 
-    def forward(self, logits, target):
+    def forward(self, logits, batch):
+        target = batch[self.target_key]
         logp = F.log_softmax(logits, dim=1)
         ce = -logp
         pt = (-ce).exp()

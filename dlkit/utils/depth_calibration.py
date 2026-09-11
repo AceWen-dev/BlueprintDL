@@ -36,3 +36,18 @@ def calibrate_from_pairs(pred_logs, gts):
     p = np.concatenate([np.asarray(x, dtype=np.float64).ravel() for x in pred_logs])
     g = np.concatenate([np.asarray(x, dtype=np.float64).ravel() for x in gts])
     return fit_log_affine(p, g)
+
+
+def median_scale_align(pred, gt, min_depth=1e-3, min_valid_pixels=10):
+    """逐样本 median scaling 对齐：把无绝对尺度的预测深度对齐到真值尺度（米）。
+
+    这是内镜/单目深度评估的标准协议（与 DepthMetrics 内部一致），
+    也可用于推理时把相对深度转成近似米制。
+    """
+    pred = np.asarray(pred, dtype=np.float64)
+    gt = np.asarray(gt, dtype=np.float64)
+    valid = (gt > min_depth) & np.isfinite(gt) & np.isfinite(pred)
+    if valid.sum() < min_valid_pixels:
+        return pred.astype(np.float32)
+    scale = np.median(gt[valid]) / max(np.median(pred[valid]), 1e-8)
+    return (pred * scale).astype(np.float32)

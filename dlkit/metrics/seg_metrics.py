@@ -13,9 +13,9 @@ class SegMetrics:
     def reset(self):
         self.cm = np.zeros((self.num_classes, self.num_classes), dtype=np.int64)
 
-    def update(self, logits, target):
+    def update(self, logits, batch):
         preds = logits.detach().argmax(dim=1).cpu().numpy().astype(np.int64)
-        target = target.detach().cpu().numpy().astype(np.int64)
+        target = batch['mask'].detach().cpu().numpy().astype(np.int64)
         if self.ignore_index is None:
             valid = np.ones_like(target, dtype=bool)
         else:

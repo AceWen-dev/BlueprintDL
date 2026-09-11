@@ -37,16 +37,16 @@ class UNet(BaseModel):
         out = self.decoder(feats)
         logits = self.head(out)
         if logits.shape[2:] != input_size:
-            logits = F.interpolate(logits, size=input_size, mode='bilinear', align_corners=False)
+            logits = F.interpolate(logits, size=input_size, mode='bilinear', align_corners=False)#特征图经过decoder和head后可能会有几个像素的差异这里直接强行对其
         return logits
 
 
-def _as(obj, **defaults):
+def _as(obj, **defaults):   #一个给原配置添加参数的函数
     if isinstance(obj, dict):
-        cfg = dict(obj)
-        params = dict(cfg.get('params', {}))
+        cfg = dict(obj) #dict语法复制obj这个字典
+        params = dict(cfg.get('params', {})) #变成参数字典
         for k, v in defaults.items():
-            params.setdefault(k, v)
+            params.setdefault(k, v)#如果原来配置有默认参数就不用动，如果没有就添加
         cfg['params'] = params
         return build_from_cfg(cfg)
-    return obj
+    return obj  

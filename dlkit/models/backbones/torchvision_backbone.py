@@ -49,6 +49,7 @@ class TorchvisionBackbone(nn.Module):
             raise ValueError('output_stride must be 8, 16 or 32')
 
         self.out_channels = _CHANNEL_MAP[name]
+        self.strides = [4, 8, 16, 32]
 
     def _dilate(self, stage, dilation):
         for m in stage.modules():

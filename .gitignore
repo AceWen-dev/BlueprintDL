@@ -11,6 +11,7 @@ dist/
 
 /runs/
 /data/
+/third_party/
 *.pth
 *.pt
 *.onnx

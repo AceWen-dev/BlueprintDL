@@ -1,72 +1,99 @@
 # BlueprintDL —— 模块化即插即用深度学习框架 (dlkit)
 
 一个以 **注册中心 (Registry) + 配置驱动 (Config)** 为核心的模块化深度学习流水线框架。
-你可以像搭积木一样自由组合数据、模型、损失、指标、优化器，快速搭建 UNet、DeepLabV3(+)、
-PSPNet 等任意分割/分类网络，并完成 **数据清洗 → 训练 → 评估 → 可视化 → 导出部署** 的一条龙流水线。
+你可以像搭积木一样自由组合数据、模型、损失、指标、优化器，快速搭建 **分割 / 分类 / 检测 / 深度估计**
+等任意网络，并完成 **数据清洗 → 训练 → 评估 → 可视化 → 导出部署** 的一条龙流水线。
+
+框架的核心是 **任务无关（task-agnostic）**：`Trainer` 不关心你训练的是分割还是检测，
+数据、模型、损失、指标都遵循统一的接口约定，新任务 = 往注册表里加组件 + 写 yaml。
 
 ## 目录结构
 
 ```
 ├── configs/                  # 流水线配置文件（yaml）
-│   ├── unet_toy.yaml
-│   ├── deeplabv3_toy.yaml
-│   ├── deeplabv3plus_toy.yaml
-│   └── clean_toy.yaml
+│   ├── unet_toy.yaml  deeplabv3_toy.yaml  deeplabv3plus_toy.yaml   # 分割
+│   ├── cls_toy.yaml                                           # 分类
+│   ├── det_toy.yaml                                           # 检测(FCOS)
+│   ├── depth_toy.yaml                                         # 深度估计
+│   ├── coloncrafter.yaml                                      # 内镜深度(ColonCrafter)
+│   └── clean_toy.yaml                                         # 数据清洗
 ├── dlkit/                    # 核心框架包
 │   ├── registry.py           # 注册中心：即插即用的核心
 │   ├── data/                 # 数据：清洗 / 数据集 / 增强 / 加载器
-│   ├── models/               # 模型：backbone / decoder / head / loss / 完整网络(zoo)
-│   ├── metrics/              # 评价指标（IoU / Dice / Acc / FWIoU）
+│   ├── models/               # 模型：backbone / decoder(neck) / head / loss / 完整网络(zoo)
+│   ├── metrics/              # 评价指标（分割 IoU / 分类 Acc / 检测 mAP / 深度 RMSE）
 │   ├── engine/               # 训练引擎 + 回调钩子 + 评估
-│   ├── visualize/            # 训练曲线 / 分割结果可视化
+│   ├── visualize/            # 训练曲线 / 分割 / 深度可视化
+│   ├── utils/                # checkpoint / device / logger / seed / batch / 检测算子 / 深度校准
 │   └── deploy/               # ONNX / TorchScript 导出与推理
 ├── tools/                    # 命令行入口脚本
-│   ├── train.py  evaluate.py  predict.py
-│   ├── clean_data.py  export.py  make_toy_data.py
-└── tests/                    # 测试
+│   ├── train.py  evaluate.py  predict.py  predict_det.py  predict_depth.py
+│   ├── clean_data.py  export.py
+│   └── make_toy_data.py  make_toy_cls_data.py  make_toy_det_data.py  make_toy_depth_data.py
+└── tests/                    # 测试（纯 Python / 需 torch 分开）
 ```
 
 ## 快速开始
 
 ```bash
-# 1. 安装依赖（CPU 版 PyTorch，Windows）
+# 1. 安装依赖（CPU 版 PyTorch）
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 
-# 2. 生成一个合成数据集（4 类：背景/圆/方块/三角）
+# ---- 分割 ----
 python tools/make_toy_data.py --root data/toy --samples 120
-
-# 3. 数据清洗（示例：检测损坏/尺寸不匹配/非法标签/重复）
-python tools/clean_data.py --config configs/clean_toy.yaml
-
-# 4. 训练 UNet
 python tools/train.py --config configs/unet_toy.yaml
 
-# 5. 评估
+# ---- 分类 ----
+python tools/make_toy_cls_data.py --root data/cls_toy --samples-per-class 30
+python tools/train.py --config configs/cls_toy.yaml
+
+# ---- 检测（FCOS）----
+python tools/make_toy_det_data.py --root data/det_toy --samples 120
+python tools/train.py --config configs/det_toy.yaml
+python tools/predict_det.py --config configs/det_toy.yaml \
+       --checkpoint runs/det_toy/best.pth --input data/det_toy/val/images \
+       --classes data/det_toy/classes.json --output-dir runs/predict_det
+
+# ---- 深度估计 ----
+python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
+python tools/train.py --config configs/depth_toy.yaml
+
+# ---- 内镜深度（ColonCrafter，仅推理，研究用途）----
+# 先按 configs/coloncrafter.yaml 注释 clone 官方仓库并装依赖
+python tools/predict_coloncrafter.py --config configs/coloncrafter.yaml \
+       --input data/c3vd/cecum_t1_a/color \
+       --gt-dir data/c3vd/cecum_t1_a/depth \
+       --output-dir runs/predict_coloncrafter
+
+# 评估 / 推理 / 导出（以分割为例）
 python tools/evaluate.py --config configs/unet_toy.yaml --checkpoint runs/unet_toy/best.pth
-
-# 6. 推理并可视化
 python tools/predict.py --config configs/unet_toy.yaml \
-       --checkpoint runs/unet_toy/best.pth \
-       --input data/toy/val/images --palette data/toy/classes.json \
-       --output-dir runs/predict
-
-# 7. 导出 ONNX / TorchScript
+       --checkpoint runs/unet_toy/best.pth --input data/toy/val/images \
+       --palette data/toy/classes.json --output-dir runs/predict
 python tools/export.py --config configs/unet_toy.yaml \
-       --checkpoint runs/unet_toy/best.pth --format onnx \
-       --output runs/unet_toy/model.onnx
+       --checkpoint runs/unet_toy/best.pth --format onnx --output runs/unet_toy/model.onnx
 ```
 
-训练曲线绘制：
+## 核心概念：任务无关协议
 
-```python
-from dlkit.visualize.curves import plot_training
-plot_training('runs/unet_toy/metrics.jsonl', 'runs/unet_toy/curves.png')
-```
+这是框架最关键的设计。`Trainer` 不硬编码任何任务，而是遵循四条约定，
+从而让分割 / 分类 / 检测 / 深度「搭积木」式接入：
 
-## 核心概念：注册中心（即插即用）
+| 组件 | 约定 | 分割 | 分类 | 检测 |
+|------|------|------|------|------|
+| Dataset 样本键 | dict，至少含 `image` | `mask` | `label` | `boxes`+`labels` |
+| collate | 默认 torch；变长标签由数据集提供 `collate_fn` | - | - | ✓ |
+| model 输出 | `forward(image) -> preds` | tensor logits | tensor logits | dict |
+| loss 签名 | `loss(preds, batch) -> 标量` | ✓ | ✓ | ✓ |
+| metric 签名 | `metric.update(preds, batch)` | ✓ | ✓ | ✓ |
 
-所有可替换的组件都通过 `Registry` 注册，配置文件中只用 `type + params` 声明，框架自动实例化。
+也就是说：**每个任务只是「数据集 + 模型 + 损失 + 指标」的一组组件**，Trainer 永远不变。
+新增任务不需要改引擎，只需写组件并注册。
+
+## 注册中心（即插即用）
+
+所有可替换组件都通过 `Registry` 注册，配置里只用 `type + params` 声明，框架自动实例化：
 
 ```python
 from dlkit.registry import BACKBONES
@@ -77,9 +104,8 @@ class MyBackbone(nn.Module):
     def __init__(self, in_channels=3):
         ...
         self.out_channels = [32, 64, 128]   # 各阶段输出通道，供 decoder 自动拼接
+        self.strides = [4, 8, 16]           # 各阶段下采样倍率，供检测推算
 ```
-
-之后即可在配置里直接引用：
 
 ```yaml
 model:
@@ -92,24 +118,28 @@ model:
 内置注册表：`BACKBONES` `DECODERS` `HEADS` `MODELS` `LOSSES` `DATASETS`
 `TRANSFORMS` `CLEANERS` `METRICS` `OPTIMIZERS` `SCHEDULERS`。
 
-`build_from_cfg` 会**递归**解析配置里所有 `type/params`，例如 loss 里嵌套多个子 loss、
-model 里嵌套 backbone/decoder/head，都会自动按顺序构建，无需手写装配代码。
+`build_from_cfg` 会**递归**解析配置里所有 `type/params`，loss 里嵌套子 loss、
+model 里嵌套 backbone/neck/head，都会自动按顺序构建。
 
-## 模型组装：UNet / DeepLabV3 / DeepLabV3+
+## 模型组装
 
-模型统一为 `backbone + decoder + head` 三段式，通过配置自由组合：
+模型统一为三段式 `backbone + decoder(neck) + head`，通过配置自由组合：
 
-| 网络 | backbone | decoder | head | 说明 |
-|------|----------|---------|------|------|
-| UNet | 任意 | UNetDecoder（上采样+跳跃连接） | SegHead | 编码-解码 |
-| DeepLabV3 | 任意 | ASPP（空洞空间金字塔池化） | SegHead | 多尺度上下文 |
-| DeepLabV3+ | 任意 | ASPP + 低层特征融合 | SegHead | 编码-解码 + ASPP |
+| 任务 | 模型 | backbone | decoder/neck | head |
+|------|------|----------|--------------|------|
+| 分割 | UNet | 任意 | UNetDecoder | SegHead |
+| 分割 | DeepLabV3 | 任意 | ASPP | SegHead |
+| 分割 | DeepLabV3+ | 任意 | ASPP + 低层融合 | SegHead |
+| 分类 | Classifier | 任意 | - | GlobalPoolHead |
+| 检测 | FCOS | 任意 | FPN | FCOSHead |
+| 深度 | DepthNet | 任意 | UNetDecoder | LogDepthHead |
+| 内镜深度 | ColonCrafter | - | - | -（扩散模型，仅推理） |
 
-内置 backbone：`SimpleCNN`（手写）、`ResNet`（手写，支持 18/34/50/101，可加载 torchvision 预训练）、
-`TorchvisionBackbone`（torchvision 预训练，支持 output_stride 8/16/32）。
+内置 backbone：`SimpleCNN`（手写轻量）、`ResNet`（手写，18/34/50/101，可加载 torchvision 预训练）、
+`TorchvisionBackbone`（torchvision 预训练）。
 
 ```yaml
-# 换成 torchvision 预训练 ResNet50
+# 换 torchvision 预训练 ResNet50 做分割
 model:
   type: DeepLabV3Plus
   params:
@@ -149,9 +179,11 @@ trainer.train()
 ## 测试
 
 ```bash
-python tests/test_registry.py     # 纯 Python，无需 torch
+python tests/test_registry.py        # 纯 Python，无需 torch
 python tests/test_transforms.py
-python tests/test_models.py       # 需要 torch
+python tests/test_models.py          # 需要 torch
+python tests/test_classification.py  # 分类任务
+python tests/test_detection.py       # 检测任务
 ```
 
 ## 可选依赖

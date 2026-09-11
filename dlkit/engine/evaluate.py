@@ -10,6 +10,7 @@ from dlkit.data.builder import build_loader
 from dlkit.utils.seed import set_seed
 from dlkit.utils.device import resolve_device
 from dlkit.utils.checkpoint import load_checkpoint
+from dlkit.utils.batch import to_device
 
 
 def evaluate(cfg, checkpoint, split='val', device=None, output_json=None):
@@ -30,14 +31,14 @@ def evaluate(cfg, checkpoint, split='val', device=None, output_json=None):
     n = 0
     with torch.no_grad():
         for batch in loader:
-            images = batch['image'].to(dev)
-            masks = batch['mask'].to(dev)
-            logits = model(images)
+            batch = to_device(batch, dev)
+            images = batch['image']
+            preds = model(images)
             if criterion is not None:
-                total_loss += float(criterion(logits, masks).detach().item())
+                total_loss += float(criterion(preds, batch).detach().item())
             n += 1
             for m in metrics:
-                m.update(logits, masks)
+                m.update(preds, batch)
 
     result = {}
     if criterion is not None:

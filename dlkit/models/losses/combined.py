@@ -12,10 +12,10 @@ class CombinedLoss(nn.Module):
             built.append(build_from_cfg(loss) if isinstance(loss, dict) else loss)
         self.losses = nn.ModuleList(built)
 
-    def forward(self, logits, target):
+    def forward(self, preds, batch):
         total = None
         for loss in self.losses:
-            value = loss(logits, target)
+            value = loss(preds, batch)
             total = value if total is None else total + value
         if total is None:
             raise RuntimeError('CombinedLoss has no sub-losses')

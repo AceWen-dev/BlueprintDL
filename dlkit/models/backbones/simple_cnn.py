@@ -32,6 +32,8 @@ class SimpleCNN(nn.Module):
             stages.append(nn.Sequential(*blocks))
         self.stages = nn.ModuleList(stages)
         self.out_channels = list(channels)
+        # 每个 stage 首块 stride=2，故第 i 层相对输入的下采样倍率为 2^(i+1)
+        self.strides = [2 ** (i + 1) for i in range(len(channels))]
 
     def forward(self, x):
         feats = []

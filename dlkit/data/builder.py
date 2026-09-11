@@ -15,6 +15,10 @@ def build_loader(data_cfg, split, shuffle=None):
         raise ValueError('dataset config for split %r must be a dict with a "type" key' % split)
     dataset = build_from_cfg(dataset_cfg)
 
+    # 任务可自定义 collate：检测等变长标签任务需要把 boxes/labels 打包成
+    # list-of-tensors，而不是 torch 默认的堆叠。优先用数据集自带的 collate_fn。
+    collate_fn = getattr(dataset, 'collate_fn', None)
+
     loader_cfg = dict(data_cfg.get('loader') or {})
     if shuffle is None:
         shuffle = loader_cfg.pop('shuffle', True) if split == 'train' else False
@@ -37,6 +41,7 @@ def build_loader(data_cfg, split, shuffle=None):
         pin_memory=pin_memory,
         drop_last=drop_last,
         persistent_workers=persistent_workers,
+        collate_fn=collate_fn,
     )
 
 

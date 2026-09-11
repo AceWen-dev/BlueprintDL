@@ -7,14 +7,17 @@ from dlkit.registry import LOSSES
 
 @LOSSES.register()
 class DiceLoss(nn.Module):
-    def __init__(self, weight=1.0, ignore_index=None, smooth=1.0, apply_softmax=True):
+    def __init__(self, weight=1.0, ignore_index=None, smooth=1.0, apply_softmax=True,
+                 target_key='mask'):
         super().__init__()
         self.weight = weight
         self.ignore_index = ignore_index
         self.smooth = smooth
         self.apply_softmax = apply_softmax
+        self.target_key = target_key
 
-    def forward(self, logits, target):
+    def forward(self, logits, batch):
+        target = batch[self.target_key]
         num_classes = logits.size(1)
         probs = F.softmax(logits, dim=1) if self.apply_softmax else logits
 

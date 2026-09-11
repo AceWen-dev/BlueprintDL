@@ -21,7 +21,8 @@ class DepthLoss(nn.Module):
         self.min_depth = min_depth
         self.weight = weight
 
-    def forward(self, logits, target):
+    def forward(self, logits, batch):
+        target = batch['mask']
         if logits.dim() == 4 and logits.shape[1] == 1:
             logits = logits.squeeze(1)
         if target.dim() == 4 and target.shape[1] == 1:

@@ -7,6 +7,10 @@ from PIL import Image
 from dlkit.registry import TRANSFORMS, build_from_cfg
 
 
+def _has_mask(sample):
+    return 'mask' in sample and sample['mask'] is not None
+
+
 @TRANSFORMS.register()
 class Compose:
     def __init__(self, transforms):
@@ -33,11 +37,12 @@ class Resize:
 
     def __call__(self, sample):
         image = Image.fromarray(sample['image'])
-        mask = Image.fromarray(sample['mask'])
         image = image.resize((self.size[1], self.size[0]), Image.BILINEAR)
-        mask = mask.resize((self.size[1], self.size[0]), Image.NEAREST)
         sample['image'] = np.asarray(image)
-        sample['mask'] = np.asarray(mask)
+        if _has_mask(sample):
+            mask = Image.fromarray(sample['mask'])
+            mask = mask.resize((self.size[1], self.size[0]), Image.NEAREST)
+            sample['mask'] = np.asarray(mask)
         return sample
 
 
@@ -50,13 +55,14 @@ class CenterCrop:
             self.size = (int(size[0]), int(size[1]))
 
     def __call__(self, sample):
-        image, mask = sample['image'], sample['mask']
+        image, mask = sample['image'], sample.get('mask')
         h, w = image.shape[:2]
         ch, cw = self.size
         top = max(0, (h - ch) // 2)
         left = max(0, (w - cw) // 2)
         sample['image'] = image[top:top + ch, left:left + cw]
-        sample['mask'] = mask[top:top + ch, left:left + cw]
+        if mask is not None:
+            sample['mask'] = mask[top:top + ch, left:left + cw]
         return sample
 
 
@@ -70,19 +76,21 @@ class RandomCrop:
         self.pad_if_needed = pad_if_needed
 
     def __call__(self, sample):
-        image, mask = sample['image'], sample['mask']
+        image, mask = sample['image'], sample.get('mask')
         h, w = image.shape[:2]
         ch, cw = self.size
         if self.pad_if_needed and (h < ch or w < cw):
             ph = max(0, ch - h)
             pw = max(0, cw - w)
             image = np.pad(image, ((0, ph), (0, pw), (0, 0)))
-            mask = np.pad(mask, ((0, ph), (0, pw)))
+            if mask is not None:
+                mask = np.pad(mask, ((0, ph), (0, pw)))
         h, w = image.shape[:2]
         top = random.randint(0, h - ch)
         left = random.randint(0, w - cw)
         sample['image'] = image[top:top + ch, left:left + cw]
-        sample['mask'] = mask[top:top + ch, left:left + cw]
+        if mask is not None:
+            sample['mask'] = mask[top:top + ch, left:left + cw]
         return sample
 
 
@@ -94,7 +102,8 @@ class RandomHorizontalFlip:
     def __call__(self, sample):
         if random.random() < self.p:
             sample['image'] = np.ascontiguousarray(sample['image'][:, ::-1])
-            sample['mask'] = np.ascontiguousarray(sample['mask'][:, ::-1])
+            if _has_mask(sample):
+                sample['mask'] = np.ascontiguousarray(sample['mask'][:, ::-1])
         return sample
 
 
@@ -106,7 +115,8 @@ class RandomVerticalFlip:
     def __call__(self, sample):
         if random.random() < self.p:
             sample['image'] = np.ascontiguousarray(sample['image'][::-1])
-            sample['mask'] = np.ascontiguousarray(sample['mask'][::-1])
+            if _has_mask(sample):
+                sample['mask'] = np.ascontiguousarray(sample['mask'][::-1])
         return sample
 
 
@@ -119,7 +129,8 @@ class RandomRotate90:
         if random.random() < self.p:
             k = random.randint(1, 3)
             sample['image'] = np.ascontiguousarray(np.rot90(sample['image'], k, (0, 1)))
-            sample['mask'] = np.ascontiguousarray(np.rot90(sample['mask'], k, (0, 1)))
+            if _has_mask(sample):
+                sample['mask'] = np.ascontiguousarray(np.rot90(sample['mask'], k, (0, 1)))
         return sample
 
 
@@ -154,11 +165,10 @@ class ToTensor:
             else:
                 image = image.permute(2, 0, 1)
             image = image / 255.0
-        mask = sample['mask']
-        if not isinstance(mask, torch.Tensor):
-            mask = torch.from_numpy(np.array(mask, copy=True)).long()
         sample['image'] = image
-        sample['mask'] = mask
+        mask = sample.get('mask')
+        if mask is not None and not isinstance(mask, torch.Tensor):
+            sample['mask'] = torch.from_numpy(np.array(mask, copy=True)).long()
         return sample
 
 

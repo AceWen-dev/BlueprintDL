@@ -6,9 +6,11 @@ from dlkit.registry import LOSSES
 
 @LOSSES.register()
 class CrossEntropyLoss(nn.Module):
-    def __init__(self, weight=1.0, ignore_index=None, class_weight=None, label_smoothing=0.0):
+    def __init__(self, weight=1.0, ignore_index=None, class_weight=None, label_smoothing=0.0,
+                 target_key='mask'):
         super().__init__()
         self.weight = weight
+        self.target_key = target_key
         kwargs = {}
         if ignore_index is not None:
             kwargs['ignore_index'] = ignore_index
@@ -19,5 +21,6 @@ class CrossEntropyLoss(nn.Module):
         except TypeError:
             self.ce = nn.CrossEntropyLoss(**kwargs)
 
-    def forward(self, logits, target):
-        return self.weight * self.ce(logits, target)
+    def forward(self, preds, batch):
+        target = batch[self.target_key]
+        return self.weight * self.ce(preds, target)

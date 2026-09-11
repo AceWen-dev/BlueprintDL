@@ -115,6 +115,8 @@ class ResNet(nn.Module):
             _dilate_stage(self.stage4, 2)
 
         self.out_channels = [w * block.expansion for w in base_widths]   #四个stage输出的通道数
+        # C2/C3/C4/C5 相对输入的下采样倍率（conv1+maxpool 后接 4 个 stage）
+        self.strides = [4, 8, 16, 32]
 
         if pretrained: #加载与训练权重
             self._load_torchvision_state()

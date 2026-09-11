@@ -14,10 +14,11 @@ class DepthMetrics:
     与 Depth Anything / YOLO26 的评估方式一致。
     """
 
-    def __init__(self, max_depth=None, min_depth=1e-3, min_valid_pixels=10):
+    def __init__(self, max_depth=None, min_depth=1e-3, min_valid_pixels=10, log_space=True):
         self.max_depth = max_depth
         self.min_depth = min_depth
         self.min_valid_pixels = min_valid_pixels
+        self.log_space = log_space
         self.reset()
 
     def reset(self):
@@ -28,9 +29,12 @@ class DepthMetrics:
         self._rmse = []
         self._silog = []
 
-    def update(self, logits, target):
-        pred = np.exp(logits.detach().cpu().numpy())
-        gt = target.detach().cpu().numpy()
+    def update(self, logits, batch):
+        if self.log_space:
+            pred = np.exp(logits.detach().cpu().numpy())
+        else:
+            pred = logits.detach().cpu().numpy()
+        gt = batch['mask'].detach().cpu().numpy()
         pred = pred[:, 0] if pred.ndim == 4 else pred
         gt = gt[:, 0] if gt.ndim == 4 else gt
 
