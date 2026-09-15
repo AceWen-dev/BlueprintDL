@@ -214,6 +214,7 @@ PowerShell 示例：
 
 ```powershell
 docker run --rm -it `
+  --gpus all `
   -v "${PWD}\data:/app/data" `
   -v "${PWD}\runs:/app/runs" `
   blueprintdl:framework `
@@ -448,6 +449,25 @@ git commit -m "添加 Docker 运行配置"
 ```
 
 如果暂时只是在学习 Docker，也可以先只提交本教程，不必立刻把 Dockerfile 加入项目。
+
+## 14. 为 Forge 中的具体项目制作镜像
+
+不要直接把整个 BlueprintDL 锻造仓库复制进客户项目镜像。先在仓库根目录审计并导出具体项目：
+
+```powershell
+uv run blueprintdl-forge audit polypmeasure
+uv run blueprintdl-forge export polypmeasure dist/projects
+```
+
+然后以 `dist/projects/polypmeasure/` 作为项目交付上下文。这个目录只包含 `project.yaml` 白名单允许的项目文件和 `.blueprintdl-export.json` 审计回执，不包含其他项目、根虚拟环境、训练数据和运行结果。
+
+当前 Forge 使用“具体项目 + 版本化 BlueprintDL Core 依赖”的交付模式。制作镜像前，需要选择一种明确的 Core 来源：
+
+- 从公司或公开包源安装兼容版本的 `blueprintdl`；
+- 随交付物提供经过构建和审计的 BlueprintDL wheel；
+- 在受控构建流水线中先构建 Core，再安装具体项目。
+
+不要通过复制整个活跃仓库或永久修改 `PYTHONPATH` 来解决 Core 依赖。镜像中的 PyTorch/CUDA 组合仍由目标 GPU、驱动和部署策略决定，不能从通用 `project.yaml` 推断。
 
 ## 参考资料
 

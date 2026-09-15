@@ -328,8 +328,8 @@ Pipeline 不应维护组件名字映射，也不应针对每个模型或优化�
 
 验证命令：
 - pytest projects/polypmeasure/tests -q
-- uv run python tools/forge.py inspect polypmeasure
-- uv run python tools/forge.py audit polypmeasure
+- uv run blueprintdl-forge inspect polypmeasure
+- uv run blueprintdl-forge audit polypmeasure
 
 交付要求：
 先检查现有实现并说明计划，然后实施；最后列出修改文件、测试结果、假设和未完成项。
@@ -497,19 +497,19 @@ ADR 至少说明：
 
 ```powershell
 # 查看有哪些具体项目
-uv run python tools/forge.py list
+uv run blueprintdl-forge list
 
 # 查看 Core 或某个 provider 提供的组件
-uv run python tools/forge.py components --provider blueprintdl
+uv run blueprintdl-forge components --provider blueprintdl
 
 # 查看项目组件归属
-uv run python tools/forge.py inspect polypmeasure
+uv run blueprintdl-forge inspect polypmeasure
 
 # 检查项目身份、边界、bootstrap、跨项目导入和组件归属
-uv run python tools/forge.py audit polypmeasure
+uv run blueprintdl-forge audit polypmeasure
 
 # 审计通过后生成独立交付目录
-uv run python tools/forge.py export polypmeasure dist/deliverables
+uv run blueprintdl-forge export polypmeasure dist/deliverables
 ```
 
 以后每增加一种常见错误，都可以考虑增加一条测试或审计规则。工程约束应该随着真实问题演化，而不是一开始设计一个无所不包的治理系统。

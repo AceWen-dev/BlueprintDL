@@ -1,5 +1,5 @@
 # UNet + 合成数据 训练配置
-# 用法: python tools/train.py --config configs/unet_toy.yaml
+# 用法: uv run python tools/train.py --config configs/unet_toy.yaml
 task: segmentation
 seed: 42
 device: auto              # auto / cpu / cuda

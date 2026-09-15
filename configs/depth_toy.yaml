@@ -1,8 +1,8 @@
 # YOLO26-Depth 风格单目深度估计 + 合成数据 训练配置
-# 生成数据: python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
-# 训练:     python tools/train.py --config configs/depth_toy.yaml
-# 评估:     python tools/evaluate.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth
-# 推理:     python tools/predict_depth.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth --input data/depth_toy/val/images
+# 生成数据: uv run python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
+# 训练:     uv run python tools/train.py --config configs/depth_toy.yaml
+# 评估:     uv run python tools/evaluate.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth
+# 推理:     uv run python tools/predict_depth.py --config configs/depth_toy.yaml --checkpoint runs/depth_toy/best.pth --input data/depth_toy/val/images
 #
 # 注意: 深度图默认 uint16 PNG（毫米）-> depth_scale: 0.001；
 #       若用 --format npy 生成（float32 米）-> depth_scale: 1.0

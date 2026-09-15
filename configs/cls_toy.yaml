@@ -1,6 +1,6 @@
 # 分类网络 + 合成数据 训练配置
-# 生成数据: python tools/make_toy_cls_data.py --root data/cls_toy --samples-per-class 30
-# 训练:     python tools/train.py --config configs/cls_toy.yaml
+# 生成数据: uv run python tools/make_toy_cls_data.py --root data/cls_toy --samples-per-class 30
+# 训练:     uv run python tools/train.py --config configs/cls_toy.yaml
 task: classification
 seed: 42
 device: auto

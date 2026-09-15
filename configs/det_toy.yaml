@@ -1,6 +1,6 @@
 # FCOS 目标检测 + 合成数据 训练配置
-# 生成数据: python tools/make_toy_det_data.py --root data/det_toy --samples 120
-# 训练:     python tools/train.py --config configs/det_toy.yaml
+# 生成数据: uv run python tools/make_toy_det_data.py --root data/det_toy --samples 120
+# 训练:     uv run python tools/train.py --config configs/det_toy.yaml
 task: detection
 seed: 42
 device: auto

@@ -6,7 +6,8 @@
 
 ```powershell
 git status
-git add .
+git diff
+git add <本次任务涉及的文件>
 git commit -m "描述这次修改"
 git push
 ```
@@ -116,6 +117,8 @@ git log --oneline -5
 
 - `dlkit/`、`tools/`、`tests/` 中的源代码；
 - `configs/` 中的配置文件；
+- `standards/` 中的工程规则；
+- `projects/<project_id>/` 中的 manifest、源码、配置、测试和文档；
 - README、教程和说明文档；
 - `pyproject.toml`、`uv.lock` 和 `.python-version`；
 - `.gitignore`。
@@ -124,6 +127,7 @@ git log --oneline -5
 
 - `.venv/`、`__pycache__/` 和 `.pytest_cache/`；
 - `data/` 和 `runs/` 中生成的数据、日志和训练结果；
+- `dist/` 中 Forge 导出物和包构建产物；
 - `*.pth`、`*.pt`、`*.onnx` 模型文件；
 - 密钥、密码、Token 和个人配置。
 
@@ -345,7 +349,42 @@ git status
 
 强制推送可能覆盖远程提交。除非明确知道自己在做什么，否则不要使用；确实需要时优先考虑 `git push --force-with-lease`，并先确认远程状态。
 
-## 13. 可以照抄的日常模板
+## 13. BlueprintDL 项目改动的提交建议
+
+修改具体项目时，先确认改动没有越过 Core/项目边界：
+
+```powershell
+uv run blueprintdl-forge inspect polypmeasure
+uv run blueprintdl-forge audit polypmeasure
+git status --short
+git diff -- projects/polypmeasure
+```
+
+推荐让一次提交表达一个清楚的工程意图：
+
+- Core 通用能力与项目业务能力尽量分开提交；
+- 项目组件、对应配置和测试放在同一个功能提交中；
+- `provider`、bootstrap 或 `project.yaml` 变化要与实现一起提交；
+- 不提交 `dist/projects/` 生成的交付目录；
+- 组件从项目提升到 Core 时，单独记录迁移原因和兼容性决定。
+
+例如：
+
+```powershell
+git add projects/polypmeasure
+git commit -m "feat(polypmeasure): add boundary loss plugin"
+```
+
+修改 BlueprintDL Core 时：
+
+```powershell
+uv run pytest -q
+uv run blueprintdl-forge components --provider blueprintdl
+git add dlkit tests README.md
+git commit -m "feat(core): add reusable component"
+```
+
+## 14. 可以照抄的日常模板
 
 ```powershell
 cd "A:\从0手搓深度学习项目"

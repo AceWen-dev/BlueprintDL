@@ -4,12 +4,12 @@
 #   1. clone 官方仓库并初始化 submodule:
 #        git clone https://github.com/rajpurkarlab/ColonCrafter third_party/ColonCrafter
 #        cd third_party/ColonCrafter && git submodule update --init --recursive
-#   2. 按官方 README 安装依赖（torch 2.1+cu118 / xformers / diffusers / peft）
+#   2. 按官方 README 为目标 GPU 环境选择依赖；不要写入 BlueprintDL Core 通用锁文件
 #   3. 权重：默认从 HF 下载 'romainhardy/coloncrafter'（含 tencent/DepthCrafter 基础权重，
 #      需登录 HF 并同意 DepthCrafter 非商用许可）
 #
 # 用法:
-#   python tools/predict_coloncrafter.py --config configs/coloncrafter.yaml \
+#   uv run python tools/predict_coloncrafter.py --config configs/coloncrafter.yaml \
 #       --input data/c3vd/cecum_t1_a/color \
 #       --gt-dir data/c3vd/cecum_t1_a/depth \
 #       --output-dir runs/predict_coloncrafter

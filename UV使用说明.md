@@ -62,7 +62,7 @@ cd "A:\从0手搓深度学习项目"
 uv sync
 ```
 
-这个命令会读取项目配置和锁文件，创建 `.venv`，安装依赖，并以可编辑模式安装当前项目。首次安装会下载较大的 PyTorch 文件，需要一些时间。
+这个命令会读取项目配置和锁文件，创建 `.venv`，安装依赖，并以可编辑模式安装当前项目。首次安装可能下载较大的 PyTorch 包，需要一些时间；它不会替你安装显卡驱动或系统 CUDA Toolkit。
 
 当前项目只声明 `torch` 和 `torchvision` 这两个框架依赖，不在核心配置中固定 CPU、CUDA 或 ROCm 源。它是一个面向 GPU 的通用学习框架，具体硬件后端属于部署环境，由使用者根据自己的驱动和平台选择。
 
@@ -310,7 +310,36 @@ uv sync
 
 不要把某台机器的 CUDA 源硬编码进通用框架配置。不同机器需要不同后端时，应使用部署专用的依赖覆盖、容器镜像或 CI 配置，并让对应环境单独解析锁文件；框架本身继续保持 `torch`/`torchvision` 的抽象依赖。
 
-## 11. 推荐的日常流程
+## 11. BlueprintDL Forge 与独立项目环境
+
+BlueprintDL 根目录和 `projects/<project_id>/` 承担不同职责：
+
+- 根目录 `pyproject.toml` 与 `uv.lock` 管理 BlueprintDL Core；
+- 每个具体项目拥有自己的 `pyproject.toml`；
+- 具体项目默认不加入根 uv workspace；
+- 不同项目可以独立选择 Python、PyTorch 和 GPU 依赖策略。
+
+在根环境中使用 Forge：
+
+```powershell
+uv run blueprintdl-forge list
+uv run blueprintdl-forge inspect polypmeasure
+uv run blueprintdl-forge audit polypmeasure
+```
+
+为项目增加依赖时，应在项目目录内操作，而不是把项目专属依赖加到根 Core：
+
+```powershell
+Set-Location projects/polypmeasure
+uv add <project-package>
+Set-Location ../..
+```
+
+`polypmeasure` 声明依赖兼容版本的 `blueprintdl`。如果 Core 尚未发布到可访问的包源，也没有随交付提供 Core 构建物，项目独立 `uv sync` 无法解析该依赖是正常的。仓库开发阶段先使用 Forge 检查结构和组件来源；独立运行或交付前，再明确 Core 的发布、私有包源或随包交付方案。
+
+不要为了让项目“暂时能 import”就把所有项目加入一个共享环境，或在交付代码中长期修改 `sys.path`。这会掩盖未声明依赖。
+
+## 12. 推荐的日常流程
 
 拿到项目或切换分支后：
 
