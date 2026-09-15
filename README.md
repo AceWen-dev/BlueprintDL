@@ -4,6 +4,36 @@
 你可以像搭积木一样自由组合数据、模型、损失、指标、优化器，快速搭建 **分割 / 分类 / 检测 / 深度估计**
 等任意网络，并完成 **数据清洗 → 训练 → 评估 → 可视化 → 导出部署** 的一条龙流水线。
 
+## 项目锻造仓库
+
+BlueprintDL 现在也可以作为具体深度学习项目的孵化仓库。框架能力继续保留在 `dlkit/`，具体项目放在 `projects/<project_id>/`，从创建开始就拥有独立的源码包、配置、测试、依赖声明和交付清单。
+
+首个项目骨架是 `projects/polypmeasure/`。Forge 提供以下入口：
+
+```bash
+# 查看仓库中的项目
+uv run python tools/forge.py list
+
+# 查看项目身份以及由它提供的注册组件
+uv run python tools/forge.py inspect polypmeasure
+
+# 查看 Core 提供的组件及其来源
+uv run python tools/forge.py components --provider blueprintdl
+
+# 检查包边界、组件归属、插件入口和交付路径
+uv run python tools/forge.py audit polypmeasure
+
+# 创建另一个独立项目骨架
+uv run python tools/forge.py new another-project --display-name "Another Project"
+
+# 通过 project.yaml 中的 delivery.include 导出独立项目
+uv run python tools/forge.py export polypmeasure dist/projects
+```
+
+项目组件使用 `provider=<project_id>` 登记来源，因此可以追踪某个项目提供了哪些 Dataset、Model、Loss、Metric 或其他插件。具体项目默认不加入根 uv workspace，各自保留环境与依赖边界，避免不同 PyTorch/GPU 方案互相锁定。
+
+完整约束见 [`standards/PROJECT_STANDARD.md`](standards/PROJECT_STANDARD.md)。
+
 框架的核心是 **任务无关（task-agnostic）**：`Trainer` 不关心你训练的是分割还是检测，
 数据、模型、损失、指标都遵循统一的接口约定，新任务 = 往注册表里加组件 + 写 yaml。
 
@@ -36,42 +66,44 @@
 ## 快速开始
 
 ```bash
-# 1. 安装依赖（CPU 版 PyTorch）
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+# 1. 安装 uv 后，同步项目环境
+uv sync
+
+# 项目面向 GPU；具体 PyTorch/CUDA 构建由部署环境选择，框架本身不写死硬件后端
+uv run python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 
 # ---- 分割 ----
-python tools/make_toy_data.py --root data/toy --samples 120
-python tools/train.py --config configs/unet_toy.yaml
+uv run python tools/make_toy_data.py --root data/toy --samples 120
+uv run python tools/train.py --config configs/unet_toy.yaml
 
 # ---- 分类 ----
-python tools/make_toy_cls_data.py --root data/cls_toy --samples-per-class 30
-python tools/train.py --config configs/cls_toy.yaml
+uv run python tools/make_toy_cls_data.py --root data/cls_toy --samples-per-class 30
+uv run python tools/train.py --config configs/cls_toy.yaml
 
 # ---- 检测（FCOS）----
-python tools/make_toy_det_data.py --root data/det_toy --samples 120
-python tools/train.py --config configs/det_toy.yaml
-python tools/predict_det.py --config configs/det_toy.yaml \
+uv run python tools/make_toy_det_data.py --root data/det_toy --samples 120
+uv run python tools/train.py --config configs/det_toy.yaml
+uv run python tools/predict_det.py --config configs/det_toy.yaml \
        --checkpoint runs/det_toy/best.pth --input data/det_toy/val/images \
        --classes data/det_toy/classes.json --output-dir runs/predict_det
 
 # ---- 深度估计 ----
-python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
-python tools/train.py --config configs/depth_toy.yaml
+uv run python tools/make_toy_depth_data.py --root data/depth_toy --samples 120
+uv run python tools/train.py --config configs/depth_toy.yaml
 
 # ---- 内镜深度（ColonCrafter，仅推理，研究用途）----
 # 先按 configs/coloncrafter.yaml 注释 clone 官方仓库并装依赖
-python tools/predict_coloncrafter.py --config configs/coloncrafter.yaml \
+uv run python tools/predict_coloncrafter.py --config configs/coloncrafter.yaml \
        --input data/c3vd/cecum_t1_a/color \
        --gt-dir data/c3vd/cecum_t1_a/depth \
        --output-dir runs/predict_coloncrafter
 
 # 评估 / 推理 / 导出（以分割为例）
-python tools/evaluate.py --config configs/unet_toy.yaml --checkpoint runs/unet_toy/best.pth
-python tools/predict.py --config configs/unet_toy.yaml \
+uv run python tools/evaluate.py --config configs/unet_toy.yaml --checkpoint runs/unet_toy/best.pth
+uv run python tools/predict.py --config configs/unet_toy.yaml \
        --checkpoint runs/unet_toy/best.pth --input data/toy/val/images \
        --palette data/toy/classes.json --output-dir runs/predict
-python tools/export.py --config configs/unet_toy.yaml \
+uv run python tools/export.py --config configs/unet_toy.yaml \
        --checkpoint runs/unet_toy/best.pth --format onnx --output runs/unet_toy/model.onnx
 ```
 
@@ -179,15 +211,21 @@ trainer.train()
 ## 测试
 
 ```bash
-python tests/test_registry.py        # 纯 Python，无需 torch
-python tests/test_transforms.py
-python tests/test_models.py          # 需要 torch
-python tests/test_classification.py  # 分类任务
-python tests/test_detection.py       # 检测任务
+uv run pytest
+
+# 也可以单独运行某个测试文件
+uv run python tests/test_registry.py
 ```
 
 ## 可选依赖
 
 ```bash
-pip install -r requirements-optional.txt   # onnx / onnxruntime / tensorboard
+# ONNX 导出/推理
+uv sync --extra export
+
+# TensorBoard
+uv sync --extra tensorboard
+
+# 安装所有可选依赖
+uv sync --all-extras
 ```

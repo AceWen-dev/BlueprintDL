@@ -1,0 +1,24 @@
+schema_version: 1
+
+project:
+  id: polypmeasure
+  display_name: PolypMeasure
+  package: polypmeasure
+  version: 0.1.0
+
+framework:
+  package: blueprintdl
+  version: ">=0.1,<0.2"
+
+plugins:
+  bootstrap:
+    - polypmeasure.bootstrap:register
+
+delivery:
+  include:
+    - pyproject.toml
+    - project.yaml
+    - README.md
+    - src
+    - configs
+    - tests

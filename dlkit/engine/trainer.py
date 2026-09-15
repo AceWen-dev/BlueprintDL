@@ -23,8 +23,8 @@ from dlkit.utils.batch import to_device
 class Trainer:
     def __init__(self, cfg, work_dir=None, device=None, resume_from=None, logger=None):
         self.cfg = cfg
-        self.work_dir = work_dir or cfg.get('output_dir', 'runs/default')
-        os.makedirs(self.work_dir, exist_ok=True)
+        self.work_dir = work_dir or cfg.get('output_dir', 'runs/default') # 获取模型训练工作目录
+        os.makedirs(self.work_dir, exist_ok=True) #创建工作目录
         self.device = resolve_device(device or cfg.get('device', 'auto'))
         self.resume_from = resume_from
         self.logger = logger or get_logger(self.work_dir)
@@ -77,13 +77,13 @@ class Trainer:
 
         self._built = True
 
-    def _build_optimizer(self):
+    def _build_optimizer(self): #   优化器需要单独写一个函数因为优化器构建的时候依赖model.parameter()，这个是模型构建完后才产生的对象不适合写进yaml文件
         opt_cfg = dict(self.cfg['optimizer'])
         opt_type = opt_cfg.pop('type')
         opt_params = build_from_cfg(opt_cfg.get('params', {}))
         return OPTIMIZERS.get(opt_type)(self.model.parameters(), **opt_params)
 
-    def _build_scheduler(self):
+    def _build_scheduler(self): #和优化器类似，学习率调度器也需要单独写一个函数，因为学习率调度器构建的时候依赖optimizer对象，这个是优化器构建完后才产生的对象不适合写进yaml文件
         s_cfg = self.cfg.get('scheduler')
         if not s_cfg:
             return None
@@ -95,7 +95,7 @@ class Trainer:
             params.setdefault('max_iters', total_steps)
         return cls(self.optimizer, **params)
 
-    def _resume(self, path):
+    def _resume(self, path): # 恢复训练，加载模型权重，优化器状态，调度器状态，当前epoch，最佳评价指标，历史评价指标等信息
         self.logger.info('Resuming from %s', path)
         ckpt = load_checkpoint(
             path, model=self.model, optimizer=self.optimizer,
@@ -184,15 +184,15 @@ class Trainer:
                 pbar.set_postfix(loss='%.4f' % (running / (step + 1)))
             self._fire('after_train_step', loss=loss_value, step=step)   # 
 
-        return running / max(1, len(self.train_loader)) # 返回平均损失
+        return running / max(1, len(self.train_loader)) # 返回平均损失，模型是一个批次进去计算损失，然后更新一次参数，len(self.train_loader)训练集有多少个batch，max(1 防止分母为零
 
-    def _validate(self):
-        self.model.eval()
+    def _validate(self): #
+        self.model.eval() #把模型切换为验证模式
         for m in self.metrics:
-            m.reset()
+            m.reset() # 把所有评价指标清零
         total_loss = 0.0
         n = 0
-        with torch.no_grad():
+        with torch.no_grad(): #不用计算梯度进行推理验证
             for batch in self.val_loader:
                 batch = to_device(batch, self.device)
                 images = batch['image']
@@ -209,12 +209,12 @@ class Trainer:
                     result[k] = float(v)
         return result
 
-    def _write_history(self):
+    def _write_history(self): #记录训练的历史记录
         with open(os.path.join(self.work_dir, 'metrics.jsonl'), 'w', encoding='utf-8') as f:
             for entry in self.metric_history:
                 f.write(json.dumps(entry) + '\n')
 
-    def _save_checkpoints(self, epoch):
+    def _save_checkpoints(self, epoch): #保存模型权重 ，配置文件，评价指标，其中优化器，调度器是模型恢复训练时需要用到的
         ckpt = {
             'epoch': epoch,
             'model': self.model.state_dict(),

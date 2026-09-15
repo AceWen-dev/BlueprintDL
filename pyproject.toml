@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "blueprintdl"
+version = "0.1.0"
+description = "A modular, configuration-driven deep learning framework."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pillow",
+    "pyyaml",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+export = [
+    "onnx",
+    "onnxruntime",
+]
+tensorboard = [
+    "tensorboard",
+]
+
+[project.scripts]
+blueprintdl-forge = "dlkit.forge.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["dlkit"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/dlkit",
+    "/README.md",
+    "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
