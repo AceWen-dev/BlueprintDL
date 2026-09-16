@@ -1,8 +1,8 @@
 from dlkit.registry import (
     ComponentRecord,
     Registry,
-    build_from_cfg,
     iter_component_records,
+    iter_registries,
     BACKBONES,
     DECODERS,
     HEADS,
@@ -15,6 +15,14 @@ from dlkit.registry import (
     OPTIMIZERS,
     SCHEDULERS,
 )
+from dlkit.builders import (
+    build_dataloaders,
+    build_from_cfg,
+    build_loader,
+    build_optimizer,
+    build_scheduler,
+    resolve_component,
+)
 from dlkit.utils.config import load_config, apply_overrides
 
 __version__ = '0.1.0'
@@ -24,6 +32,12 @@ __all__ = [
     'Registry',
     'build_from_cfg',
     'iter_component_records',
+    'iter_registries',
+    'resolve_component',
+    'build_loader',
+    'build_dataloaders',
+    'build_optimizer',
+    'build_scheduler',
     'BACKBONES',
     'DECODERS',
     'HEADS',

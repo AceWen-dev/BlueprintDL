@@ -4,7 +4,8 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
-from dlkit.registry import DATASETS, TRANSFORMS, build_from_cfg
+from dlkit.builders import build_from_cfg
+from dlkit.registry import DATASETS, TRANSFORMS
 
 
 def _build_transform(transform):

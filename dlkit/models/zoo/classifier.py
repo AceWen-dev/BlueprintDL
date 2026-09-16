@@ -1,4 +1,5 @@
-from dlkit.registry import MODELS, build_from_cfg
+from dlkit.builders import build_from_cfg
+from dlkit.registry import MODELS
 from dlkit.models.base import BaseModel
 from dlkit.models.backbones.simple_cnn import SimpleCNN
 from dlkit.models.heads.classification_head import GlobalPoolHead

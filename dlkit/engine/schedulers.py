@@ -6,6 +6,7 @@ from dlkit.registry import SCHEDULERS
 @SCHEDULERS.register()
 class PolyLR:
     per_iter = True
+    requires_total_steps = True
 
     def __init__(self, optimizer, max_iters, power=0.9, last_iter=-1):
         self.optimizer = optimizer

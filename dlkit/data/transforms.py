@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-from dlkit.registry import TRANSFORMS, build_from_cfg
+from dlkit.builders import build_from_cfg
+from dlkit.registry import TRANSFORMS
 
 
 def _has_mask(sample):

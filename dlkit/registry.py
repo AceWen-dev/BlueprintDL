@@ -176,40 +176,23 @@ def iter_component_records(provider=None, registry=None):
         yield from current.records(provider=provider)
 
 
-def _resolve(type_name):#负责把配置字典的字符串名字，对应到注册表中的具体类（说白话就是把配置的字符串变成真正的类）
-    if isinstance(type_name, str) and '.' in type_name:
-        reg_name, cls_name = type_name.split('.', 1)
-        for registry in _ALL_REGISTRIES:
-            if registry.name == reg_name:
-                return registry.get(cls_name)
-        raise KeyError('Unknown registry name %r in qualified type %r' % (reg_name, type_name))
+def iter_registries():
+    """Iterate registered semantic registries in declaration order."""
 
-    matches = [r for r in _ALL_REGISTRIES if type_name in r]
-    if not matches:
-        raise KeyError(
-
-            '%r is not registered in any registry. Available: %s'
-            % (type_name, sorted({k for r in _ALL_REGISTRIES for k in r.keys()}))
-        )
-    if len(matches) > 1:
-        names = ', '.join('%s.%s' % (r.name, type_name) for r in matches)
-        raise KeyError(
-            '%r is ambiguous, found in %d registries. Use a qualified name: %s'
-            % (type_name, len(matches), names)
-        )
-    return matches[0].get(type_name)
+    yield from tuple(_ALL_REGISTRIES)
 
 
-def build_from_cfg(cfg): #函数的输入是字典或json格式的配置文件，输出是从这个写配置文件中提取的类的实例化对象
-    if isinstance(cfg, (list, tuple)):
-        return [build_from_cfg(c) for c in cfg]
-    if not isinstance(cfg, dict):
-        return cfg
-    if 'type' in cfg:
-        item = _resolve(cfg['type'])
-        params = cfg.get('params', {})
-        if getattr(item, '_manual_build', False):
-            return item(**params)
-        params = build_from_cfg(params)
-        return item(**params) #返回带参数的类
-    return {k: build_from_cfg(v) for k, v in cfg.items()}#item返回键值对，{}里面是字典推导式，[]是列表推导式
+def _resolve(type_name):
+    """Compatibility wrapper for the builder-owned resolver."""
+
+    from dlkit.builders.component import resolve_component
+
+    return resolve_component(type_name)
+
+
+def build_from_cfg(cfg):
+    """Compatibility wrapper; new code should import from ``dlkit.builders``."""
+
+    from dlkit.builders.component import build_from_cfg as _build_from_cfg
+
+    return _build_from_cfg(cfg)

@@ -5,8 +5,7 @@ import torch
 import dlkit.data  # noqa: F401
 import dlkit.models  # noqa: F401
 import dlkit.metrics  # noqa: F401
-from dlkit.registry import build_from_cfg
-from dlkit.data.builder import build_loader
+from dlkit.builders import build_from_cfg, build_loader
 from dlkit.utils.seed import set_seed
 from dlkit.utils.device import resolve_device
 from dlkit.utils.checkpoint import load_checkpoint

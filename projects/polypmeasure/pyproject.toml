@@ -12,6 +12,15 @@ dependencies = [
     "blueprintdl>=0.1,<0.2",
 ]
 
+[project.optional-dependencies]
+data = [
+    "gdown>=5.0",
+]
+
+[project.scripts]
+polypmeasure-predict-coloncrafter = "polypmeasure.cli.predict_coloncrafter:main"
+polypmeasure-download-c3vd = "polypmeasure.cli.download_c3vd:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",

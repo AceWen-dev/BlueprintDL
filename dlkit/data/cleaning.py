@@ -6,7 +6,8 @@ import os
 import numpy as np
 from PIL import Image
 
-from dlkit.registry import CLEANERS, build_from_cfg
+from dlkit.builders import build_from_cfg
+from dlkit.registry import CLEANERS
 
 Image.MAX_IMAGE_PIXELS = None
 

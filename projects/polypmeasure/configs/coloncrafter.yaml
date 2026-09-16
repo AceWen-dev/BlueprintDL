@@ -1,0 +1,27 @@
+# PolypMeasure 的 ColonCrafter 研究型推理配置。
+#
+# 官方实现与模型资产不由 BlueprintDL 自动下载。请在目标 GPU 环境根据
+# ColonCrafter README 安装兼容依赖，并初始化其 DepthCrafter submodule。
+#
+# 在已安装 PolypMeasure 的环境中运行：
+#   polypmeasure-predict-coloncrafter \
+#     --config configs/coloncrafter.yaml \
+#     --input data/c3vd/cecum_t1_a/color \
+#     --gt-dir data/c3vd/cecum_t1_a/depth
+task: depth_estimation
+device: cuda
+
+model:
+  type: ColonCrafter
+  params:
+    model_path: romainhardy/coloncrafter
+    coloncrafter_dir: third_party/ColonCrafter
+    device: cuda
+
+infer:
+  size: 512
+  num_inference_steps: 1
+  window_size: 16
+  overlap: 8
+  guidance_scale: 1.0
+  seed: 42

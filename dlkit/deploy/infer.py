@@ -6,7 +6,7 @@ import torch
 from PIL import Image
 
 import dlkit.models  # noqa: F401
-from dlkit.registry import build_from_cfg
+from dlkit.builders import build_from_cfg
 from dlkit.data.dataset import _build_transform
 from dlkit.utils.device import resolve_device
 from dlkit.utils.checkpoint import load_checkpoint

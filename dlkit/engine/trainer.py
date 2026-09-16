@@ -11,8 +11,12 @@ from tqdm import tqdm
 import dlkit.data  # noqa: F401
 import dlkit.models  # noqa: F401
 import dlkit.metrics  # noqa: F401
-from dlkit.registry import build_from_cfg, OPTIMIZERS, SCHEDULERS
-from dlkit.data.builder import build_dataloaders
+from dlkit.builders import (
+    build_dataloaders,
+    build_from_cfg,
+    build_optimizer,
+    build_scheduler,
+)
 from dlkit.utils.seed import set_seed
 from dlkit.utils.device import resolve_device
 from dlkit.utils.logger import get_logger
@@ -60,8 +64,15 @@ class Trainer:
         self.logger.info('Model %s: %.2fM params', type(self.model).__name__, n_params / 1e6) #搭建训练日至
 
         self.criterion = build_from_cfg(self.cfg['loss']).to(self.device) #定义损失函数
-        self.optimizer = self._build_optimizer() #搭建优化器 单独写方法
-        self.scheduler = self._build_scheduler() #搭建学习率调度器 单独写方法
+        self.optimizer = build_optimizer(
+            self.cfg['optimizer'], parameters=self.model.parameters()
+        )
+        total_steps = len(self.train_loader) * int(self.cfg['train']['epochs'])
+        self.scheduler = build_scheduler(
+            self.cfg.get('scheduler'),
+            optimizer=self.optimizer,
+            total_steps=total_steps,
+        )
         self.metrics = [build_from_cfg(m) for m in self.cfg.get('metrics', [])] #定义评价指标
 
         train_cfg = self.cfg['train'] 
@@ -76,24 +87,6 @@ class Trainer:
             self._resume(self.resume_from)
 
         self._built = True
-
-    def _build_optimizer(self): #   优化器需要单独写一个函数因为优化器构建的时候依赖model.parameter()，这个是模型构建完后才产生的对象不适合写进yaml文件
-        opt_cfg = dict(self.cfg['optimizer'])
-        opt_type = opt_cfg.pop('type')
-        opt_params = build_from_cfg(opt_cfg.get('params', {}))
-        return OPTIMIZERS.get(opt_type)(self.model.parameters(), **opt_params)
-
-    def _build_scheduler(self): #和优化器类似，学习率调度器也需要单独写一个函数，因为学习率调度器构建的时候依赖optimizer对象，这个是优化器构建完后才产生的对象不适合写进yaml文件
-        s_cfg = self.cfg.get('scheduler')
-        if not s_cfg:
-            return None
-        s_type = s_cfg['type']
-        params = dict(s_cfg.get('params', {}) or {})
-        cls = SCHEDULERS.get(s_type)
-        if s_type == 'PolyLR':
-            total_steps = len(self.train_loader) * int(self.cfg['train']['epochs'])
-            params.setdefault('max_iters', total_steps)
-        return cls(self.optimizer, **params)
 
     def _resume(self, path): # 恢复训练，加载模型权重，优化器状态，调度器状态，当前epoch，最佳评价指标，历史评价指标等信息
         self.logger.info('Resuming from %s', path)

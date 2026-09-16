@@ -8,5 +8,6 @@ def test_project_identity():
 
 
 def test_bootstrap_is_lightweight_and_repeatable():
-    assert register() == ()
-    assert register() == ()
+    expected = ("polypmeasure.components.models",)
+    assert register() == expected
+    assert register() == expected

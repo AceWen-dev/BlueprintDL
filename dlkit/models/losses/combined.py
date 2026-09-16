@@ -1,6 +1,7 @@
 import torch.nn as nn
 
-from dlkit.registry import LOSSES, build_from_cfg
+from dlkit.builders import build_from_cfg
+from dlkit.registry import LOSSES
 
 
 @LOSSES.register()
