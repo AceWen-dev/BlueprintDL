@@ -6,6 +6,7 @@ import dlkit.data  # noqa: F401
 import dlkit.models  # noqa: F401
 import dlkit.metrics  # noqa: F401
 from dlkit.builders import build_from_cfg, build_loader
+from dlkit.utils.plugins import load_plugin_modules
 from dlkit.utils.seed import set_seed
 from dlkit.utils.device import resolve_device
 from dlkit.utils.checkpoint import load_checkpoint
@@ -13,6 +14,7 @@ from dlkit.utils.batch import to_device
 
 
 def evaluate(cfg, checkpoint, split='val', device=None, output_json=None):
+    load_plugin_modules(cfg.get('imports') or [])
     set_seed(cfg.get('seed', 42))
     dev = resolve_device(device or cfg.get('device', 'auto'))
 
@@ -26,13 +28,13 @@ def evaluate(cfg, checkpoint, split='val', device=None, output_json=None):
     model.eval()
     for m in metrics:
         m.reset()
+    forward_batch = getattr(model, 'forward_batch', None)
     total_loss = 0.0
     n = 0
     with torch.no_grad():
         for batch in loader:
             batch = to_device(batch, dev)
-            images = batch['image']
-            preds = model(images)
+            preds = forward_batch(batch) if callable(forward_batch) else model(batch['image'])
             if criterion is not None:
                 total_loss += float(criterion(preds, batch).detach().item())
             n += 1

@@ -1,6 +1,6 @@
 # 如何用 AI 做好一个深度学习项目
 
-> 适用场景：使用 Coding Agent 开发中大型深度学习项目，尤其适用于 BlueprintDL 这种基于注册表、Builder、依赖注入和配置驱动的项目锻造仓库。
+> 适用场景：使用 Coding Agent 开发中大型深度学习项目，尤其适用于 BlueprintDL 这种基于注册表、Builder、依赖注入和配置驱动的深度学习实验框架。
 
 ## 阅读建议
 
@@ -35,7 +35,7 @@ AI 可以显著提高编码速度，但它不能代替工程治理。
     ↓ 每次任务都引用并验证
 AI 在有限范围内实施
     ↓
-测试、审查、交付门禁
+测试、审查、验收检查
 ```
 
 最重要的原则是：
@@ -72,7 +72,7 @@ AI 更适合做一个受约束、可检查、可回滚的工程协作者，而�
 
 AI 并不知道：
 
-- 这是 BlueprintDL Core 的通用模型，还是 `polypmeasure` 项目专属模型；
+- 这是 `dlkit` Core 的通用组件，还是某个实验专属实现；
 - 是否需要拆成 backbone、decoder 和 head；
 - 使用哪个 Registry；
 - 注册名和 `provider` 是什么；
@@ -88,15 +88,14 @@ AI 并不知道：
 
 更可靠的方式是把工作拆成可以独立验收的增量，例如：
 
-1. 建立项目骨架和清单；
-2. 定义数据输入输出契约；
-3. 实现并注册 Dataset；
-4. 实现模型组件；
-5. 完善 Builder；
-6. 接入 Pipeline；
-7. 添加单元测试；
-8. 添加 GPU 集成测试；
-9. 审计并导出项目。
+1. 定义数据输入输出契约；
+2. 实现并注册 Dataset；
+3. 实现模型组件；
+4. 注册新组件并进入对应包的导入入口；
+5. 添加示例配置；
+6. 添加单元测试；
+7. 添加 GPU 集成测试；
+8. 用完整流程跑通一次小规模训练。
 
 ---
 
@@ -106,27 +105,27 @@ AI 并不知道：
 
 | 记忆层 | 保存内容 | 推荐载体 | 更新时机 |
 | --- | --- | --- | --- |
-| 长期规则 | 架构哲学、目录边界、禁止事项、验证要求 | `AGENTS.md`、`standards/` | 规则确实发生变化时 |
+| 长期规则 | 架构哲学、目录边界、禁止事项、验证要求 | `README.md`、`AGENTS.md` | 规则确实发生变化时 |
 | 架构事实 | 模块职责、依赖方向、对象构造流程 | `docs/ARCHITECTURE.md` | 架构发生变化时 |
-| 项目身份 | 项目 ID、包名、Core 版本、插件入口、交付清单 | `project.yaml`、`pyproject.toml` | 项目契约变化时 |
+| 实验定义 | 任务、数据路径、模型、损失、指标和超参 | `configs/*.yaml` | 每个新实验开始时 |
 | 设计决策 | 为什么选择或放弃某个方案 | `docs/decisions/` 下的 ADR | 重要决策作出时 |
 | 当前任务 | 本次目标、范围、验收标准和非目标 | Issue、任务卡或临时任务说明 | 每个任务开始和结束时 |
-| 可执行约束 | 行为是否正确、边界是否被破坏 | 测试、静态检查、Forge audit | 每次修改时 |
+| 可执行约束 | 行为是否正确、边界是否被破坏 | 测试、静态检查 | 每次修改时 |
 
 这里最关键的是区分“规则”和“事实”：
 
-- “Core 不得导入具体项目”是长期规则；
-- “PolypMeasure 使用 `polypmeasure` 作为 provider”是项目事实；
-- “本次只添加 BoundaryLoss，不修改 Trainer”是当前任务范围；
-- “为什么没有把所有项目加入同一个 uv workspace”是设计决策。
+- “组件必须通过 Registry 注册后才能被配置引用”是长期规则；
+- “`UNet` 注册在 `dlkit.models`”是架构事实；
+- “本次只添加一个 Loss，不修改 Trainer”是当前任务范围；
+- “为什么 optimizer 通过专用 Builder 注入 `model.parameters()`”是设计决策。
 
 ### 3.1 文档不是越多越好
 
 文档必须有明确所有权，避免同一件事在五个文件中各写一份。建议为每类信息指定唯一权威来源：
 
 - Python 依赖以 `pyproject.toml` 为准；
-- 项目身份和交付清单以 `project.yaml` 为准；
-- 架构规则以 `standards/PROJECT_STANDARD.md` 为准；
+- 实验配置以 `configs/*.yaml` 为准；
+- 架构规则以 `README.md` 为准；
 - 组件归属以 Registry 的 provenance 记录为准；
 - 行为正确性以测试结果为准。
 
@@ -139,44 +138,62 @@ AI 并不知道：
 你的 BlueprintDL 仓库可以理解为四个区域：
 
 ```text
-standards/       长期工程规则和交付门禁
-dlkit/           BlueprintDL Core，可复用框架能力
-projects/        具体项目，每个项目拥有独立边界
-dist/            审计后生成的构建和交付产物
+dlkit/                   可复用框架能力与通用组件
+configs/                 框架教学示例配置
+projects/<id>/           真实项目:configs/ + extensions/ + reports/
+  extensions/            项目专属组件与 Recipe(由配置 imports 加载)
+tools/                   全局 CLI(训练/评估/数据/实验治理/部署)
+runs/                    实验输出，不进 Git
 ```
 
 依赖方向必须保持为：
 
 ```text
-具体项目  ──────>  BlueprintDL Core 的公开接口
-Core       -X--->  具体项目
-项目 A     -X--->  项目 B 的内部实现
-交付项目   -X--->  仓库中未声明的隐藏文件
+tools / configs  ─────>  dlkit 的公开接口
+dlkit            -X--->  某个实验的具体数据路径、超参或临时脚本
 ```
 
 ### 4.1 新代码到底应该放在哪里
 
 每次让 AI 写代码前，先回答下面的问题：
 
-1. 这个实现是否包含客户、数据集、标签、业务流程或具体任务假设？
-2. 它是否已经被两个以上项目真实复用？
-3. 它是否有稳定且与具体项目无关的接口？
-4. 把它放进 Core 后，Core 是否需要反向依赖某个项目？
+1. 这个实现是否包含某个实验的数据集、标签、业务流程或具体任务假设？
+2. 它是否已经被多个实验真实复用？
+3. 它是否有稳定且与具体实验无关的接口？
+4. 把它放进 `dlkit/` 后，`dlkit/` 是否需要反向依赖某个实验？
 
 推荐判断规则：
 
 | 代码类型 | 应放位置 |
 | --- | --- |
 | 通用 Registry、Builder、配置校验、基础训练能力 | `dlkit/` |
-| 已证明可跨项目复用的 Dataset、Model、Loss、Metric | `dlkit/` |
-| PolypMeasure 特有的数据格式、模型结构、损失或业务规则 | `projects/polypmeasure/src/polypmeasure/` |
-| 项目训练、评估和推理配置 | 对应项目的 `configs/` |
-| 项目测试 | 对应项目的 `tests/` |
-| 尚不确定能否通用的组件 | 先留在具体项目，不要提前放进 Core |
+| 多个实验通用的 Dataset、Model、Loss、Metric | `dlkit/` |
+| 训练、评估和推理配置 | `configs/` |
+| 辅助的数据生成、检查和后处理脚本 | `tools/data/` 等全局 CLI 分组 |
+| 单个项目专属的 Dataset/Loss/Metric/Model/Recipe | `projects/<id>/extensions/` + 配置 `imports:` |
+| 流程型想法（EMA、一致性、自蒸馏、交替优化） | 一个注册到 `RECIPES` 的 Recipe，禁止复制训练脚本 |
+| 组件和行为测试 | `tests/` |
+| 尚不确定能否通用的组件 | 先放 `projects/<id>/extensions/` 用真实实验验证，再提升进 `dlkit/` |
+| 一次性探索 | `scratch/`（gitignore），归档前清理或提升 |
 
 一个实用原则是：
 
-> 先项目化，再通用化；通过真实复用证明通用性，而不是凭想象把代码提前塞进 Core。
+> 先实验，再通用化；通过真实复用证明通用性，而不是凭想象把代码提前塞进 `dlkit/`。
+
+### 4.2 新想法落地决策树
+
+每次 AI 说"我要写个训练脚本"时，先让它回答：
+
+1. 这个想法改变的是**配置**、**组件**、**流程**，还是**一次性分析**？
+2. 配置 → 只加/改 YAML；组件 → 注册到 Registry（项目专属放 `projects/<id>/extensions/`）；流程 → 注册 Recipe；一次性 → `scratch/`。
+3. 是否真的需要新入口？**几乎永远不需要**。`tools/` 只增加对所有实验都成立的命令。
+
+硬规则：
+
+- 禁止为单个想法新建 `train_xxx.py`；训练入口只有 `tools/train.py`；
+- 需要改训练循环时，只能通过 Hook 或 Recipe，不允许复制 `Trainer`；
+- 项目专属实现只进 `projects/<id>/extensions/`，被第二个项目复用后再提升进 `dlkit/`；
+- `scratch/` 可以乱来，但项目 archive 前必须清理或提升，否则不算收尾。
 
 ---
 
@@ -202,19 +219,15 @@ Registry 不应该：
 - 初始化 CUDA；
 - 保存已经构造好的有状态对象。
 
-项目组件需要显式携带归属信息，例如：
+组件注册时可以声明来源与标签信息，例如：
 
 ```python
-@LOSSES.register(
-    name="BoundaryLoss",
-    provider="polypmeasure",
-    tags=("segmentation", "boundary"),
-)
-class BoundaryLoss:
+@LOSSES.register(name="MyLoss", tags=("segmentation",))
+class MyLoss:
     ...
 ```
 
-这比单纯根据目录或类名猜测归属更加可靠。
+Core 中的 `dlkit.*` 实现自动归属 `blueprintdl`。这比单纯根据目录或类名猜测归属更加可靠。
 
 ### 5.2 Component：只实现自己的领域能力
 
@@ -301,35 +314,32 @@ Pipeline 不应维护组件名字映射，也不应针对每个模型或优化�
 
 ```text
 任务目标：
-在 polypmeasure 项目中新增 BoundaryLoss，并支持通过配置构造。
+在 dlkit 中新增 BoundaryLoss，并支持通过配置构造。
 
-项目归属：
-这是 polypmeasure 专属组件，不得放入 dlkit Core。
+模块归属：
+这是通用损失组件，放入 dlkit；不得在 Trainer 中写死类型判断。
 
 允许范围：
-- projects/polypmeasure/src/polypmeasure/components/
-- projects/polypmeasure/configs/
-- projects/polypmeasure/tests/
+- dlkit/models/（组件对应目录）
+- configs/
+- tests/
 
 工程约束：
-- 遵守 standards/PROJECT_STANDARD.md；
 - 使用 LOSSES Registry；
-- provider 必须为 polypmeasure；
 - 配置只能包含可序列化参数；
 - 不修改 Trainer，不硬编码设备，不安装依赖；
 - 保留工作区已有无关修改。
 
 验收标准：
-- 显式 bootstrap 后可以查询到该组件；
+- tools/list_components.py 可以查询到该组件；
 - Builder 可以从配置构造它；
 - 重名或未知名称能清楚报错；
 - 原配置对象不被修改；
-- 项目测试和 Forge audit 通过。
+- pytest 测试通过。
 
 验证命令：
-- pytest projects/polypmeasure/tests -q
-- uv run blueprintdl-forge inspect polypmeasure
-- uv run blueprintdl-forge audit polypmeasure
+- uv run pytest -q
+- uv run python tools/list_components.py --registry losses
 
 交付要求：
 先检查现有实现并说明计划，然后实施；最后列出修改文件、测试结果、假设和未完成项。
@@ -359,11 +369,11 @@ Pipeline 不应维护组件名字映射，也不应针对每个模型或优化�
 一个好的计划应该能映射到文件和验收标准，例如：
 
 ```text
-1. 在项目组件目录实现 BoundaryLoss，并注册 provider。
-2. 在 bootstrap 的显式导入列表中启用该模块。
+1. 在 dlkit 组件目录实现 BoundaryLoss，并注册到对应 Registry。
+2. 在组件包的导入入口中显式导入该模块。
 3. 添加一份最小配置示例。
 4. 测试直接调用、注册发现和配置构造。
-5. 运行项目测试与 Forge audit。
+5. 运行 pytest 与 tools/list_components.py。
 ```
 
 “完善架构”“优化代码”不算可验证计划。
@@ -408,12 +418,10 @@ Pipeline 不应维护组件名字映射，也不应针对每个模型或优化�
 
 如果任务改变了长期事实，必须同步更新对应权威文件：
 
-- 新增项目：更新项目清单；
 - 新增公开入口：更新 README；
 - 改变架构决策：添加 ADR；
-- 改变配置结构：更新 schema、示例和迁移说明；
-- 新增项目组件：通过 Registry provenance 自动生成清单，不手写第二份列表；
-- 改变交付边界：更新 `project.yaml` 并重新审计。
+- 改变配置结构：更新示例配置并说明迁移；
+- 新增组件：Registry provenance 的记录自动更新，不手写第二份列表。
 
 普通实现细节不需要全部写进长期文档。否则“记忆文件”会快速膨胀并失去作用。
 
@@ -460,7 +468,7 @@ Pipeline 不应维护组件名字映射，也不应针对每个模型或优化�
 重要决定一旦形成，应记录为 ADR。例如：
 
 ```text
-docs/decisions/0001-independent-project-environments.md
+docs/decisions/0001-inject-optimizer-dependencies.md
 ```
 
 ADR 至少说明：
@@ -472,7 +480,7 @@ ADR 至少说明：
 - 可能带来的后果；
 - 哪些条件出现时可以重新评估。
 
-以后 AI 先阅读 ADR，就不需要每次重新猜测为什么没有使用统一 workspace。
+以后 AI 先阅读 ADR，就不需要每次重新猜测这个决定背后的取舍。
 
 ---
 
@@ -482,34 +490,23 @@ ADR 至少说明：
 
 ### 9.1 可自动检查的约束示例
 
-- Core 包构建物不能包含 `projects/`；
-- Core 不能导入项目包；
-- 项目 A 不能导入项目 B；
-- 每个项目必须有 `project.yaml` 和 `pyproject.toml`；
-- bootstrap 必须属于项目自己的 Python 包；
-- 项目组件必须声明正确的 `provider`；
-- 交付路径必须是相对路径且不能越界；
-- 导出物不能包含 `.venv`、缓存、数据集、checkpoint 或密钥；
-- 配置中不得出现不可序列化运行时对象；
-- 新插件不得要求修改中央 Pipeline 的类型分支。
+- Core 构建物不能包含 `runs/`、`data/` 或临时脚本；
+- 组件必须通过 Registry 注册，不能在 Trainer 中新增具体类型分支；
+- 配置中不得出现不可序列化运行时对象、本机绝对路径或密钥；
+- 运行输出和缓存必须落在声明目录（如 `runs/`）并保持不进 Git；
+- 新插件不得要求修改中央 Pipeline 的选择逻辑。
 
 ### 9.2 当前仓库已有的检查入口
 
 ```powershell
-# 查看有哪些具体项目
-uv run blueprintdl-forge list
+# 运行 Core 测试
+uv run pytest -q
 
-# 查看 Core 或某个 provider 提供的组件
-uv run blueprintdl-forge components --provider blueprintdl
+# 查看已注册组件及其 provider
+uv run python tools/list_components.py
 
-# 查看项目组件归属
-uv run blueprintdl-forge inspect polypmeasure
-
-# 检查项目身份、边界、bootstrap、跨项目导入和组件归属
-uv run blueprintdl-forge audit polypmeasure
-
-# 审计通过后生成独立交付目录
-uv run blueprintdl-forge export polypmeasure dist/deliverables
+# 按任务查看某一类组件
+uv run python tools/list_components.py --registry metrics
 ```
 
 以后每增加一种常见错误，都可以考虑增加一条测试或审计规则。工程约束应该随着真实问题演化，而不是一开始设计一个无所不包的治理系统。
@@ -529,28 +526,25 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 
 ### 架构
 
-- [ ] 代码放在正确的 Core 或项目边界；
+- [ ] 代码放在 `dlkit/` 正确的模块边界；
 - [ ] 依赖方向没有反转；
 - [ ] 新组件通过已有扩展点接入；
 - [ ] 配置只保存可序列化信息；
 - [ ] 运行时对象通过依赖注入提供；
-- [ ] Pipeline 没有新增具体类型分支；
-- [ ] 项目组件具有正确 provider。
+- [ ] Pipeline 没有新增具体类型分支。
 
 ### 环境
 
 - [ ] 未擅自安装或替换 CUDA、PyTorch、驱动或系统运行时；
 - [ ] 未把某台机器的绝对路径写进通用配置；
-- [ ] 项目依赖记录在自己的 `pyproject.toml`；
+- [ ] 依赖变更已记录在 `pyproject.toml` 与锁文件中；
 - [ ] GPU 集成要求有明确说明和跳过策略。
 
 ### 验证
 
 - [ ] 新增或修改了相关测试；
 - [ ] 相关测试实际运行并通过；
-- [ ] Core 与具体项目测试分别运行；
-- [ ] Forge audit 通过；
-- [ ] 必要时 package build 和导出验证通过。
+- [ ] 必要时 `uv build` 验证通过。
 
 ### 交付
 
@@ -563,27 +557,27 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 
 ## 11. 四种常用提示词模板
 
-### 11.1 接手一个新项目
+### 11.1 接手一个新实验
 
 ```text
-我要在 BlueprintDL 锻造仓库中接入一个名为 <project-id> 的深度学习项目。
+我要在 BlueprintDL 中做一个新的实验：<一句话目标，例如用模型 X 对数据 Y 做分割>。
 
-先不要写业务代码。请先：
-1. 阅读仓库工程标准和 Forge 规则；
-2. 检查现有目录、Git 状态和相似项目；
-3. 明确 Core 与该项目的边界；
-4. 列出项目的数据、模型、损失、指标、训练、推理和交付需求中仍缺少的信息；
+先不要写代码。请先：
+1. 阅读 README 和相关现有配置；
+2. 检查现有目录、Git 状态和相似的组件实现；
+3. 明确哪些能力复用 `dlkit/`，哪些需要新增；
+4. 列出数据、模型、损失、指标和评估口径中仍缺少的信息；
 5. 给出分阶段实施计划和每阶段验收标准。
 
-约束：项目必须可独立打包和测试；项目组件带 provider；不加入统一 GPU
-依赖环境；不安装 CUDA 或下载权重；不修改无关项目。
+约束：新组件注册到对应 Registry；配置只写数据路径和超参；
+不安装 CUDA 或下载权重；不修改无关代码。
 ```
 
 ### 11.2 新增功能
 
 ```text
 目标：<一句话描述可观察结果>
-归属：<BlueprintDL Core / 具体项目 ID>
+归属：<dlkit Core / 实验配置 / tools 脚本>
 允许修改：<目录或模块>
 禁止修改：<目录、公共接口、环境等>
 架构要求：<Registry/Builder/DI/Pipeline 约束>
@@ -617,14 +611,13 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 这是审查任务，不要修改文件。
 
 请检查：
-- Core 与项目边界；
-- 跨项目导入；
-- Registry 归属；
+- `dlkit/` 模块职责与依赖方向；
+- Registry 归属与命名；
 - Builder 与依赖注入；
 - Pipeline 是否包含具体类型分支；
 - 配置中是否混入运行时对象或机器路径；
 - GPU/CUDA 是否被错误写死；
-- 测试、构建和交付清单是否完整。
+- 测试、构建和文档是否与代码同步。
 
 按严重程度报告问题。每个问题提供文件位置、原因、影响和最小修复建议。
 没有证据的问题不要猜测。
@@ -640,8 +633,8 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 
 ```text
 暂停继续编码。请先审计当前未提交修改：
-1. 逐个文件说明它属于 Core 还是哪个具体项目；
-2. 对照工程标准找出放错位置、越界依赖和重复实现；
+1. 逐个文件说明它属于 `dlkit/` 哪个模块、配置还是工具脚本；
+2. 对照 README 约束找出放错位置、越界依赖和重复实现；
 3. 区分我的原有修改与你本次修改；
 4. 给出最小纠正计划；
 5. 在我没有要求前，不要删除、重置或覆盖已有文件。
@@ -653,7 +646,7 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 - 不要因为一个文件放错位置就顺手重构全部目录；
 - 不要覆盖用户已有未提交改动；
 - 先保留行为，再迁移位置；
-- 迁移后重新运行原测试和边界审计。
+- 迁移后重新运行原测试。
 
 ---
 
@@ -679,13 +672,13 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 
 注册表应该服务于真实扩展点，不要把每个工具函数、数据结构和异常类都注册化。过度抽象会让人和 AI 都难以判断真实流程。
 
-### 反模式四：把所有项目放进一个依赖环境
+### 反模式四：把所有实验塞进一个不可解释的大环境
 
-多个项目共用 Git 仓库，不代表必须共用一套 Python、PyTorch 和 GPU 依赖。客户环境或 CUDA 组合可能不同，具体项目应保留独立锁定能力。
+共享 Git 仓库和虚拟环境没有问题，但实验的差异必须体现在配置中，而不是靠改代码、改环境变量或注释掉某行来区分。
 
 ### 反模式五：只看代码，不验证交付
 
-源仓库中能运行，可能只是因为 `PYTHONPATH`、根目录文件或其他项目恰好存在。最终应检查独立构建物或导出目录，而不仅是当前工作区。
+源仓库中能运行，可能只是因为 `PYTHONPATH`、根目录文件或本机数据恰好存在。最终应在干净环境（如容器或新目录克隆）验证，而不仅是当前工作区。
 
 ### 反模式六：要求 AI 一次性重写整个系统
 
@@ -695,43 +688,44 @@ uv run blueprintdl-forge export polypmeasure dist/deliverables
 
 真正的进度是已经关闭的风险和已经验证的能力，不是新增了多少文件。一个稳定的小切片比十个未经验证的模块更有价值。
 
+### 反模式八：为每个想法新建训练脚本
+
+"换了个损失""加个一致性约束"就复制一份 `train_xxx.py`，是最隐蔽的债务：每个脚本都会分叉日志、checkpoint、评估口径，几周后没人说得清哪个脚本才是真的。正确做法：配置能表达的写配置，新的算法单元注册组件，流程变化写 Recipe，一次性探索进 `scratch/` 并在收尾时处理。
+
 ---
 
 ## 14. 推荐为本仓库逐步补齐的治理文件
 
-当前仓库已经有 `standards/PROJECT_STANDARD.md`、项目清单、Forge 工具和各类使用说明。后续可以按实际需要补充，而不是一次全部创建。
+当前仓库已经有 README、教程和各类使用说明。后续可以按实际需要补充，而不是一次全部创建。
 
 ```text
 AGENTS.md
     给 Coding Agent 的简明仓库级强制规则，只放高频且长期有效的内容。
 
 docs/ARCHITECTURE.md
-    描述 Core、项目、Registry、Builder、Pipeline 和 Composition Root 的关系。
+    描述 dlkit、Registry、Builder、Pipeline 和 Composition Root 的关系。
 
 docs/decisions/
-    保存关键架构决策，例如独立项目环境、交付模式和组件晋升规则。
+    保存关键架构决策，例如依赖注入方式、组件注册和晋升规则。
 
-projects/<id>/README.md
-    描述具体项目目标、数据契约、运行方式和限制。
+configs/<experiment>.yaml
+    每个实验的身份：数据路径、模型、损失、指标和超参。
 
-projects/<id>/project.yaml
-    项目身份、Core 兼容范围、bootstrap 和交付白名单。
-
-projects/<id>/tests/
-    把项目行为和边界变成可执行约束。
+tests/
+    把核心行为和边界变成可执行约束。
 ```
 
 `AGENTS.md` 应保持短小。适合放入的规则包括：
 
 - 修改前必须阅读哪些文件；
-- Core 和项目的依赖边界；
-- 新组件如何注册 provider；
+- `dlkit/`、`configs/`、`tools/` 的职责边界；
+- 新组件如何注册；
 - 禁止修改或下载哪些环境内容；
 - 必须保留用户未提交修改；
 - 任务完成前必须运行哪些检查；
 - 不确定归属时先报告，不自行创建新层级。
 
-详细原理仍然放在标准和架构文档中，`AGENTS.md` 只引用它们，避免复制整份说明。
+详细原理仍然放在 README 和架构文档中，`AGENTS.md` 只引用它们，避免复制整份说明。
 
 ---
 
@@ -750,7 +744,7 @@ AI 最容易出错的是：
 
 - 在缺乏业务背景时替你作长期架构决策；
 - 把临时方案当成永久规则；
-- 混淆 Core、项目和环境的边界；
+- 混淆 Core、实验配置和环境的边界；
 - 在大范围修改中忽略早期约束；
 - 用“代码更多”掩盖“验证不足”。
 
@@ -798,12 +792,12 @@ AI 的职责是：
 1. 每个任务明确目标、范围、非目标和验收标准；
 2. 修改前让 AI 阅读规则、相似实现、测试和 Git 状态；
 3. 永久规则写进仓库，不依赖聊天记忆；
-4. 先判断代码属于 Core 还是具体项目；
+4. 先判断代码属于 `dlkit/` 哪个模块，还是实验专属；
 5. 一次只做一个可验证的垂直切片；
 6. 不允许 AI 顺手修改环境和无关模块；
-7. 关键约束尽量写成测试或审计；
+7. 关键约束尽量写成测试；
 8. 要求实际运行验证命令，不接受“理论上可以”；
 9. 阶段结束记录设计决定和未完成项；
-10. 交付时从独立构建物验证，不只在开发仓库里验证。
+10. 交付时在干净环境中验证，不只在开发仓库里验证。
 
 坚持这十条，你与 AI 的关系就会从“反复提醒和返工”，逐渐变成“有规则、有证据、可持续的工程协作”。

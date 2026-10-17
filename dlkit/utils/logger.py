@@ -1,24 +1,56 @@
+import hashlib
 import logging
 import os
 
 
-def get_logger(work_dir=None, name='dlkit'):
-    logger = logging.getLogger(name)
-    if logger.handlers:
-        return logger
-    logger.setLevel(logging.INFO)
-    fmt = logging.Formatter(
+def _formatter():
+    return logging.Formatter(
         '%(asctime)s | %(levelname)s | %(message)s', datefmt='%H:%M:%S'
     )
-    console = logging.StreamHandler()
-    console.setFormatter(fmt)
-    logger.addHandler(console)
-    if work_dir:
-        os.makedirs(work_dir, exist_ok=True)
-        file_handler = logging.FileHandler(
-            os.path.join(work_dir, 'log.txt'), encoding='utf-8'
-        )
-        file_handler.setFormatter(fmt)
-        logger.addHandler(file_handler)
-    logger.propagate = False
+
+
+def get_logger(work_dir=None, name='dlkit'):
+    """获取日志器。
+
+    - 每个 run 目录使用独立子 logger,日志不会串到其它 run;
+    - 文件 handler 延迟打开:未真正写日志时不会占用 log.txt,便于清理;
+    - 文件 handler 由 ``close_logger`` / ``Trainer.close`` 关闭(Windows 必需);
+    - 关闭后子 logger 仍通过父 logger 输出到控制台。
+    """
+
+    root = logging.getLogger(name)
+    root.setLevel(logging.INFO)
+    root.propagate = False
+    if not root.handlers:
+        console = logging.StreamHandler()
+        console.setFormatter(_formatter())
+        root.addHandler(console)
+
+    if not work_dir:
+        return root
+
+    absolute = os.path.abspath(str(work_dir))
+    suffix = hashlib.md5(absolute.encode('utf-8')).hexdigest()[:10]
+    logger = logging.getLogger('%s.%s' % (name, suffix))
+    if logger.handlers:
+        return logger
+
+    logger.setLevel(logging.INFO)
+    logger.propagate = True  # 控制台输出交给父 logger
+    file_handler = logging.FileHandler(
+        os.path.join(absolute, 'log.txt'), encoding='utf-8', delay=True
+    )
+    file_handler.setFormatter(_formatter())
+    logger.addHandler(file_handler)
     return logger
+
+
+def close_logger(logger):
+    """关闭并移除 logger 上的 handler(释放 log.txt 文件句柄)。"""
+
+    for handler in list(logger.handlers):
+        handler.close()
+        logger.removeHandler(handler)
+
+
+__all__ = ['close_logger', 'get_logger']

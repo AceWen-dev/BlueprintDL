@@ -10,6 +10,7 @@ from dlkit.builders import build_from_cfg
 from dlkit.data.dataset import _build_transform
 from dlkit.utils.device import resolve_device
 from dlkit.utils.checkpoint import load_checkpoint
+from dlkit.utils.plugins import load_plugin_modules
 from dlkit.visualize.seg import colorize, save_mask, save_overlay
 
 
@@ -23,6 +24,7 @@ def _load_palette(path):
 
 class Inferencer:
     def __init__(self, cfg, checkpoint, device=None, palette=None, class_names=None):
+        load_plugin_modules(cfg.get('imports') or [])
         self.device = resolve_device(device or cfg.get('device', 'auto'))
         self.model = build_from_cfg(cfg['model']).to(self.device)
         load_checkpoint(checkpoint, model=self.model, device=self.device)

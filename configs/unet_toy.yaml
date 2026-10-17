@@ -3,7 +3,9 @@
 task: segmentation
 seed: 42
 device: auto              # auto / cpu / cuda
-output_dir: runs/unet_toy
+project: examples
+name: unet_toy
+# runs identity: runs/examples/unet_toy/<timestamp>/
 
 data:
   train:

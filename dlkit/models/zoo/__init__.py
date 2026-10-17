@@ -4,3 +4,5 @@ from . import deeplabv3plus
 from . import depth_net
 from . import classifier
 from . import fcos
+from . import ssl
+from . import spm_net

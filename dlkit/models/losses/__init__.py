@@ -4,3 +4,4 @@ from . import focal
 from . import combined
 from . import depth_loss
 from . import fcos_loss
+from . import ssl_loss

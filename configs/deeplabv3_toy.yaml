@@ -2,7 +2,9 @@
 task: segmentation
 seed: 42
 device: auto
-output_dir: runs/deeplabv3_toy
+project: examples
+name: deeplabv3_toy
+# runs identity: runs/examples/deeplabv3_toy/<timestamp>/
 
 data:
   train:

@@ -162,6 +162,8 @@ CLEANERS = Registry('cleaners')
 METRICS = Registry('metrics')
 OPTIMIZERS = Registry('optimizers')
 SCHEDULERS = Registry('schedulers')
+VISUALIZERS = Registry('visualizers')
+RECIPES = Registry('recipes')
 
 
 def iter_component_records(provider=None, registry=None):

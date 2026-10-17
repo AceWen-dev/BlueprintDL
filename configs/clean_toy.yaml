@@ -1,5 +1,7 @@
 # 数据清洗配置
-# 用法: uv run python tools/clean_data.py --config configs/clean_toy.yaml
+# 用法: uv run python tools/data/clean_data.py --config configs/clean_toy.yaml
+project: examples
+name: clean_toy
 clean:
   image_dir: data/toy/train/images
   mask_dir: data/toy/train/masks

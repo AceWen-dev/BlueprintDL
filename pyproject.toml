@@ -26,9 +26,10 @@ export = [
 tensorboard = [
     "tensorboard",
 ]
-
-[project.scripts]
-blueprintdl-forge = "dlkit.forge.cli:main"
+multimodal = [
+    "segmentation-models-pytorch>=0.3",
+    "transformers>=4.40",
+]
 
 [dependency-groups]
 dev = [
