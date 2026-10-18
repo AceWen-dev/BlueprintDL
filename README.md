@@ -55,7 +55,7 @@ BlueprintDL/
 ├── configs/                       # 框架教学示例配置(project: examples)
 ├── tools/                         # 命令行入口
 │   ├── train.py / evaluate.py     # 训练与评估
-│   ├── exp/                       # 实验治理: visualize(可视化)、compare(对比)、project(生命周期)
+│   ├── exp/                       # 实验治理: visualize、compare、catalog(总目录)、project(生命周期)
 │   ├── data/                      # 数据侧: prepare_data(体检)、clean_data(清洗)、make_toy_*(示例数据)
 │   └── deploy/                    # 推理与导出: predict*.py、export.py
 ├── scripts/                       # 本机环境辅助脚本(如 setup_gpu.ps1,不属于组件体系)
@@ -261,6 +261,37 @@ uv run python tools/exp/compare.py --project polyp --metric mIoU  # 指定对比
 
 训练完某一组实验后跑一次 compare,即可把"这组到底谁好"沉淀为项目报告,而不是靠翻文件夹。
 
+## 实验总目录:catalog
+
+`compare` 只回答"某个项目里谁更好";`catalog` 回答跨项目的问题:我一共有哪些 run、某个数据集/模型下跑过什么、每个实验线最好的是哪次、哪些 run 缺产物、某个权重是从哪次 run 微调来的。
+
+```powershell
+# 扫描 runs/，生成 reports/catalog.{json,md,csv}
+uv run python tools/exp/catalog.py build
+
+# 按项目/实验/状态/模型/数据集/标签/来源过滤
+uv run python tools/exp/catalog.py query --project examples --status finished
+uv run python tools/exp/catalog.py query --dataset toy --model UNet
+
+# 每个实验线在指定指标上的最佳 run（max / min）
+uv run python tools/exp/catalog.py best --metric mIoU
+uv run python tools/exp/catalog.py best --metric val_loss --mode min
+
+# 缺 checkpoint / 缺 vis / 缺指标 / 没有 run.json 的 run 清单
+uv run python tools/exp/catalog.py audit
+
+# 沿 init_from / resume_from / parent_run 追踪谱系
+uv run python tools/exp/catalog.py lineage --run runs/examples/unet_toy/<timestamp>
+uv run python tools/exp/catalog.py lineage --run runs/.../best.pth --direction up
+```
+
+输出说明:
+
+- `catalog.json` 是完整索引,`catalog.md` 用于人读,`catalog.csv` 方便贴表格;
+- `reports/` 是派生数据,已加入 `.gitignore`,随时可用 `build` 重建;
+- `dataset` 目前是**从 `data.*.params` 路径推断的提示**,不是 dataset registry;显式写 `dataset` 时优先使用显式值。划分 (`split`) 只读取显式字段,不做猜测;
+- 没有 `run.json` 的旧目录会以 `source=legacy` 进入索引,并尽量从 `config.yaml` / `metrics.jsonl` 回读;它们会被 `audit` 点名,不会被静默混入正式 run。
+
 ## 数据体检:一次体检,一份档案
 
 新数据接进来先跑体检,把`样本数/配对率/类别像素分布/尺寸一致性/零值掩膜/坐标越界`等问题在训练前暴露,并落为数据档案:
@@ -375,7 +406,8 @@ uv build
 ## 文档导航
 
 - [完整框架教程](教程.md):从配置到自定义组件、实验对比的完整学习路径;
-- [AI 辅助项目开发指南](AI辅助项目开发指南.md):如何用工程约束让 Coding Agent 稳定协作。
+- [AI 辅助项目开发指南](AI辅助项目开发指南.md):如何用工程约束让 Coding Agent 稳定协作;
+- [实验系统先例调研](docs/notes/prior-art.md):MMEngine、Lightning、timm、nnU-Net、MLflow 等为什么自建实验系统。
 
 ## 当前状态
 
@@ -386,5 +418,6 @@ uv build
 - 每个 run 有唯一时间戳目录与 run.json 身份,支持 `--resume latest` 谱延续与 `train.init_from` 权重初始化;
 - 支持项目插件(`imports`)与流程型 Recipe(内置 EMA 教师),项目专属扩展放在 `projects/<id>/extensions/`;
 - `tools/data/prepare_data.py` 提供数据体检与 dataset_meta.json 档案;`tools/exp/project.py` 提供项目生命周期(new/list/status/archive,收尾保留全部 runs);
-- `tools/` 同时提供生成数据、训练、评估、推理、导出、数据清洗、可视化(visualize)与对比(compare);
+- `tools/exp/catalog.py` 提供跨项目 run 总目录(build/query/best/audit/lineage),输出 catalog.json/md/csv;
+- `tools/` 同时提供生成数据、训练、评估、推理、导出、数据清洗、可视化(visualize)、对比(compare)与总目录(catalog);
 - 计划中的实验按"新组件 + 新配置 + 新测试"的流程加入;真实项目放进 `projects/<id>/`。
